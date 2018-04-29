@@ -6,15 +6,16 @@ import static org.lwjgl.glfw.GLFW.*;
 import org.lwjgl.glfw.GLFWKeyCallback;
 import static org.lwjgl.glfw.GLFWVulkan.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
-import static org.lwjgl.system.MemoryUtil.memAllocLong;
 import static org.lwjgl.vulkan.EXTDebugReport.*;
-import static org.lwjgl.vulkan.VK10.*;
 import org.lwjgl.vulkan.VkDebugReportCallbackEXT;
 import static fr.placeholder.engine.Context.*;
+import static fr.placeholder.engine.PhysicalDevice.*;
 import static fr.placeholder.engine.Utils.*;
 import org.lwjgl.glfw.GLFWWindowSizeCallback;
+import org.lwjgl.system.MemoryStack;
+import static org.lwjgl.system.MemoryStack.stackPush;
 
-public class Windu {
+public final class Windu {
 
    private static int width, height;
    private static long window;
@@ -33,15 +34,22 @@ public class Windu {
       }
 
       createInstance(requiredExtensions);
-      final VkDebugReportCallbackEXT debugCallback = new VkDebugReportCallbackEXT() {
+      
+      setupDebugging(instance, VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT, new VkDebugReportCallbackEXT() {
          @Override
          public int invoke(int flags, int objectType, long object, long location, int messageCode, long pLayerPrefix, long pMessage, long pUserData) {
             System.err.println("ERROR OCCURED: " + VkDebugReportCallbackEXT.getString(pMessage));
             return 0;
          }
-      };
-      final long debugCallbackHandle = setupDebugging(instance, VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT, debugCallback);
-
+      });
+      
+      createWindow();
+      
+      getPhysicalDevices();
+      
+   }
+   
+   private void createWindow() {
       // Create GLFW window
       glfwDefaultWindowHints();
       glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -58,10 +66,11 @@ public class Windu {
             }
          }
       });
-      LongBuffer pSurface = memAllocLong(1);
-      vkAssert(glfwCreateWindowSurface(instance, window, null, pSurface));
-      final long surface = pSurface.get(0);
-      
+      try(MemoryStack stack = stackPush()) {
+         LongBuffer pSurface = stack.mallocLong(1);
+         vkAssert(glfwCreateWindowSurface(instance, window, null, pSurface));
+         surface = pSurface.get(0);
+      }
       
       // Handle canvas resize
       glfwSetWindowSizeCallback(window, new GLFWWindowSizeCallback() {
@@ -76,7 +85,6 @@ public class Windu {
          }
       });
       glfwShowWindow(window);
-
    }
    
    public int getWidth() {
