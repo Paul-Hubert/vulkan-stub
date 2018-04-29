@@ -1,3 +1,4 @@
 # vulkan-stub
 This is a Vulkan experiment, for now.
-Java is great for performance critical applications
+Java is great for performance critical applications.
+Nice Meme.
