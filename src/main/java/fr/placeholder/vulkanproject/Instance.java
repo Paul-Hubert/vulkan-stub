@@ -31,10 +31,12 @@ public class Instance {
    public static String[] enabledLayerNames = {"VK_LAYER_LUNARG_standard_validation"};
    
    public static Instance createInstance() {
-      return new Instance();
+      Instance inst = new Instance();
+      inst.init();
+      return inst;
    }
    
-   private Instance() {
+   private void init() {
       try (MemoryStack stack = stackPush()) {
          VkApplicationInfo appInfo = VkApplicationInfo.mallocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)

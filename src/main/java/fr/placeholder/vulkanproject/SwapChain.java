@@ -13,7 +13,6 @@ import static org.lwjgl.vulkan.KHRSurface.VK_PRESENT_MODE_FIFO_KHR;
 import static org.lwjgl.vulkan.KHRSurface.VK_PRESENT_MODE_MAILBOX_KHR;
 import static org.lwjgl.vulkan.KHRSurface.VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 import static org.lwjgl.vulkan.KHRSwapchain.*;
-import org.lwjgl.vulkan.VK10;
 import static org.lwjgl.vulkan.VK10.VK_COMPONENT_SWIZZLE_A;
 import static org.lwjgl.vulkan.VK10.VK_COMPONENT_SWIZZLE_B;
 import static org.lwjgl.vulkan.VK10.VK_COMPONENT_SWIZZLE_G;
@@ -26,7 +25,6 @@ import static org.lwjgl.vulkan.VK10.VK_IMAGE_VIEW_TYPE_2D;
 import static org.lwjgl.vulkan.VK10.VK_SHARING_MODE_EXCLUSIVE;
 import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 import static org.lwjgl.vulkan.VK10.vkCreateImageView;
-import static org.lwjgl.vulkan.VK10.vkDestroyImage;
 import static org.lwjgl.vulkan.VK10.vkDestroyImageView;
 import org.lwjgl.vulkan.VkExtent2D;
 import org.lwjgl.vulkan.VkImageViewCreateInfo;
@@ -196,5 +194,5 @@ public class SwapChain {
       vkDestroyImageView(device.logical, imageViews[1], null);
       vkDestroySwapchainKHR(device.logical, chain, null);
    }
-
+  
 }

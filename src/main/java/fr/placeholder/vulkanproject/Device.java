@@ -78,43 +78,67 @@ public class Device {
       
       try(MemoryStack stack = stackPush()) {
          
-         IntBuffer pnum = stack.mallocInt(1);
-         vkGetPhysicalDeviceQueueFamilyProperties(physical, pnum, null);
-         VkQueueFamilyProperties.Buffer pqueueProperties = VkQueueFamilyProperties.mallocStack(pnum.get(0), stack);
-         vkGetPhysicalDeviceQueueFamilyProperties(physical, pnum, pqueueProperties);
-         
          /*
          Very primitive way of selecting queues; 
          */
          
-         int graphicsQueueIndex = -1, computeQueueIndex = -1, transferQueueIndex = -1;
-         for(int i = 0; i<pqueueProperties.capacity(); i++) {
+         int qfc = pqueueProperties.capacity();
+         
+         boolean[][] indices = new boolean[qfc][];
+         
+         for(int i = 0; i<qfc; i++) {
+            indices[i] = new boolean[pqueueProperties.get(i).queueCount()];
+         }
+         
+         int graphicsI = 0, graphicsJ = 0;
+         for(int i = 0; i<qfc; i++) {
             if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT) {
-               graphicsQueueIndex = i;
-               continue;
-            } if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT) {
-               computeQueueIndex = i;
-               continue;
-            } if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_TRANSFER_BIT) == VK_QUEUE_TRANSFER_BIT) {
-               transferQueueIndex = i;
+               graphicsI = i;
+               indices[graphicsI][graphicsJ] = true;
+               break;
             }
          }
          
+         int computeI = -1, computeJ = -1;
+         for(int i = 0; i<qfc; i++) {
+            if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT) {
+               for(int j = 0; j<indices[i].length; j++) {
+                  if(!indices[i][j]) {
+                     if(computeI>0&&computeJ>0) indices[computeI][computeJ] = false;
+                     computeI = i; computeJ = j;
+                     indices[computeI][computeJ] = true;
+                     break;
+                  }
+               }
+            }
+         }
+         
+         int transferI = -1, transferJ = -1;
+         for(int i = 0; i<qfc; i++) {
+            if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_TRANSFER_BIT) == VK_QUEUE_TRANSFER_BIT) {
+               for(int j = 0; j<indices[i].length; j++) {
+                  if(!indices[i][j]) {
+                     if(transferI>0&&transferJ>0) indices[transferI][transferJ] = false;
+                     transferI = i; transferJ = j;
+                     indices[transferI][transferJ] = true;
+                     break;
+                  }
+               }
+            }
+         }
+         
+         int count = 1 + (graphicsI!=computeI&&graphicsI!=transferI?1:0) + (computeI!=transferI? 1 : 0);
+         int[] countQ = {graphicsI, graphicsI!=computeI?computeI:-1, transferI!=computeI && graphicsI!=transferI ? transferI:-1};
+         
          FloatBuffer pQueuePriorities = stack.callocFloat(1).put(0.0f);
          pQueuePriorities.flip();
-         VkDeviceQueueCreateInfo.Buffer qinfo = VkDeviceQueueCreateInfo.callocStack(3, stack);
-         qinfo.get(0)
-                 .sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
-                 .queueFamilyIndex(graphicsQueueIndex)
-                 .pQueuePriorities(pQueuePriorities);
-         qinfo.get(1)
-                 .sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
-                 .queueFamilyIndex(computeQueueIndex)
-                 .pQueuePriorities(pQueuePriorities);
-         qinfo.get(2)
-                 .sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
-                 .queueFamilyIndex(transferQueueIndex)
-                 .pQueuePriorities(pQueuePriorities);
+         VkDeviceQueueCreateInfo.Buffer qinfo = VkDeviceQueueCreateInfo.callocStack(count, stack);
+         for(int i = 0; i<count; i++) {
+            qinfo.get(i)
+                    .sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
+                    .queueFamilyIndex(countQ[i])
+                    .pQueuePriorities(pQueuePriorities);
+         }
          
          
          // These are some features that are enabled for VkNeo
@@ -128,8 +152,8 @@ public class Device {
          ppEnabledExtensionNames.put(stack.UTF8(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
          ppEnabledExtensionNames.flip();
          
-         PointerBuffer ppEnabledLayerNames = stack.mallocPointer(instance.enabledLayerNames.length);
-         for(String s : instance.enabledLayerNames) ppEnabledLayerNames.put(stack.UTF8(s));
+         PointerBuffer ppEnabledLayerNames = stack.mallocPointer(Instance.enabledLayerNames.length);
+         for(String s : Instance.enabledLayerNames) ppEnabledLayerNames.put(stack.UTF8(s));
          ppEnabledLayerNames.flip();
          
          // Put it all together.
@@ -150,11 +174,11 @@ public class Device {
          // Now get the queues from the device we just created.
          PointerBuffer pQueue = stack.mallocPointer(3);
          
-         vkGetDeviceQueue(logical, graphicsQueueIndex, 0,  pQueue);
+         vkGetDeviceQueue(logical, graphicsI, graphicsJ,  pQueue);
          graphics = new VkQueue(pQueue.get(), logical);
-         vkGetDeviceQueue(logical, computeQueueIndex, 0,  pQueue);
+         vkGetDeviceQueue(logical, computeI, computeJ,  pQueue);
          compute = new VkQueue(pQueue.get(), logical);
-         vkGetDeviceQueue(logical, transferQueueIndex, 0,  pQueue);
+         vkGetDeviceQueue(logical, transferI, transferJ,  pQueue);
          transfer = new VkQueue(pQueue.get(), logical);
          
       }

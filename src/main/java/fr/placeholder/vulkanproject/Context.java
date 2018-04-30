@@ -2,6 +2,7 @@ package fr.placeholder.vulkanproject;
 
 import static fr.placeholder.vulkanproject.Device.getPhysicalDevices;
 import static fr.placeholder.vulkanproject.Instance.createInstance;
+import static fr.placeholder.vulkanproject.RenderPass.createRenderPass;
 import static fr.placeholder.vulkanproject.SwapChain.createSwapChain;
 import static fr.placeholder.vulkanproject.Windu.createWindu;
 import static fr.placeholder.vulkanproject.Windu.initGLFWContext;
@@ -15,6 +16,7 @@ public class Context {
    public static Windu win;
    public static Device device;
    public static SwapChain swap;
+   public static RenderPass render;
    
    public static void init() {
       initGLFWContext();
@@ -35,11 +37,14 @@ public class Context {
       
       swap = createSwapChain();
       
+      render = createRenderPass();
+      
       win.show();
       
    }
 
    protected static void dispose() {
+      render.dispose();
       swap.dispose();
       device.dispose();
       win.dispose();
