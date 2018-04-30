@@ -1,17 +1,13 @@
-package fr.placeholder.engine;
+package fr.placeholder.vulkanproject;
 
-import static fr.placeholder.engine.Utils.*;
+import static fr.placeholder.vulkanproject.Utils.*;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.vulkan.*;
 import static org.lwjgl.vulkan.VK10.*;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.NULL;
-import static org.lwjgl.system.MemoryUtil.memAllocPointer;
-import static org.lwjgl.system.MemoryUtil.memUTF8;
 
 import static org.lwjgl.vulkan.EXTDebugReport.*;
 

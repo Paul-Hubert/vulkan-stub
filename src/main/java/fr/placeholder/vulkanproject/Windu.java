@@ -1,4 +1,4 @@
-package fr.placeholder.engine;
+package fr.placeholder.vulkanproject;
 
 import java.nio.LongBuffer;
 import org.lwjgl.PointerBuffer;
@@ -8,9 +8,9 @@ import static org.lwjgl.glfw.GLFWVulkan.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.EXTDebugReport.*;
 import org.lwjgl.vulkan.VkDebugReportCallbackEXT;
-import static fr.placeholder.engine.Context.*;
-import static fr.placeholder.engine.Device.getPhysicalDevices;
-import static fr.placeholder.engine.Utils.*;
+import static fr.placeholder.vulkanproject.Context.*;
+import static fr.placeholder.vulkanproject.Device.getPhysicalDevices;
+import static fr.placeholder.vulkanproject.Utils.*;
 import org.lwjgl.glfw.GLFWWindowSizeCallback;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
