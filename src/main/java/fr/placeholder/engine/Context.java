@@ -10,18 +10,20 @@ import java.nio.LongBuffer;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.NULL;
+import static org.lwjgl.system.MemoryUtil.memAllocPointer;
 import static org.lwjgl.system.MemoryUtil.memUTF8;
 
 import static org.lwjgl.vulkan.EXTDebugReport.*;
 
 public class Context {
 
-   protected static VkInstance instance;
-   protected static long debugCallback;
-   protected static long surface;
-   protected static PhysicalDevice physicalDevice;
-
-   protected static ByteBuffer pLayerName = memUTF8("VK_LAYER_LUNARG_standard_validation");
+   public static VkInstance instance;
+   public static long debugCallback;
+   public static long surface;
+   public static Device device;
+   
+   public static String[] enabledExtensionNames = {VK_EXT_DEBUG_REPORT_EXTENSION_NAME};
+   public static String[] enabledLayerNames = {"VK_LAYER_LUNARG_standard_validation"};
 
    protected static void createInstance(PointerBuffer requiredExtensions) {
       try (MemoryStack stack = stackPush()) {
@@ -31,13 +33,13 @@ public class Context {
                  .pEngineName(stack.UTF8("Vulkanite"))
                  .apiVersion(VK_MAKE_VERSION(1, 1, 0));
 
-         PointerBuffer ppEnabledExtensionNames = stack.mallocPointer(requiredExtensions.remaining() + 1);
+         PointerBuffer ppEnabledExtensionNames = stack.mallocPointer(requiredExtensions.remaining() + enabledLayerNames.length);
          ppEnabledExtensionNames.put(requiredExtensions);
-         ppEnabledExtensionNames.put(stack.UTF8(VK_EXT_DEBUG_REPORT_EXTENSION_NAME));
+         for(String s : enabledExtensionNames) ppEnabledExtensionNames.put(stack.UTF8(s));
          ppEnabledExtensionNames.flip();
 
-         PointerBuffer ppEnabledLayerNames = stack.mallocPointer(1);
-         ppEnabledLayerNames.put(pLayerName);
+         PointerBuffer ppEnabledLayerNames = stack.mallocPointer(enabledLayerNames.length);
+         for(String s : enabledLayerNames) ppEnabledLayerNames.put(stack.UTF8(s));
          ppEnabledLayerNames.flip();
 
          VkInstanceCreateInfo pCreateInfo = VkInstanceCreateInfo.mallocStack(stack)
@@ -64,13 +66,13 @@ public class Context {
                  .flags(flags);
          LongBuffer pCallback = stack.mallocLong(1);
          vkAssert(vkCreateDebugReportCallbackEXT(instance, dbgCreateInfo, null, pCallback));
-
+         
          debugCallback = pCallback.get(0);
       }
    }
 
    protected static void dispose() {
-      physicalDevice.dispose();
+      device.dispose();
       vkDestroyDebugReportCallbackEXT(instance, debugCallback, null);
       vkDestroyInstance(instance, null);
    }

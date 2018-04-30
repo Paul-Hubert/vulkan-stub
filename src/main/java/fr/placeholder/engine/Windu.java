@@ -9,7 +9,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.EXTDebugReport.*;
 import org.lwjgl.vulkan.VkDebugReportCallbackEXT;
 import static fr.placeholder.engine.Context.*;
-import static fr.placeholder.engine.PhysicalDevice.*;
+import static fr.placeholder.engine.Device.getPhysicalDevices;
 import static fr.placeholder.engine.Utils.*;
 import org.lwjgl.glfw.GLFWWindowSizeCallback;
 import org.lwjgl.system.MemoryStack;
@@ -46,7 +46,6 @@ public final class Windu {
       createWindow();
       
       getPhysicalDevices();
-      
    }
    
    private void createWindow() {
