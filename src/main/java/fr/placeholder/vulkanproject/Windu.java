@@ -1,15 +1,11 @@
 package fr.placeholder.vulkanproject;
 
+import static fr.placeholder.vulkanproject.Context.instance;
 import java.nio.LongBuffer;
-import org.lwjgl.PointerBuffer;
 import static org.lwjgl.glfw.GLFW.*;
 import org.lwjgl.glfw.GLFWKeyCallback;
 import static org.lwjgl.glfw.GLFWVulkan.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
-import static org.lwjgl.vulkan.EXTDebugReport.*;
-import org.lwjgl.vulkan.VkDebugReportCallbackEXT;
-import static fr.placeholder.vulkanproject.Context.*;
-import static fr.placeholder.vulkanproject.Device.getPhysicalDevices;
 import static fr.placeholder.vulkanproject.Utils.*;
 import org.lwjgl.glfw.GLFWWindowSizeCallback;
 import org.lwjgl.system.MemoryStack;
@@ -17,43 +13,31 @@ import static org.lwjgl.system.MemoryStack.stackPush;
 
 public final class Windu {
 
-   private static int width, height;
-   private static long window;
-
-   public Windu() {
+   public int width = 800, height = 600;
+   public long window;
+   public long surface;
+   
+   public static void initGLFWContext() {
       if (!glfwInit()) {
          throw new RuntimeException("Failed to initialize GLFW");
       }
       if (!glfwVulkanSupported()) {
          throw new AssertionError("GLFW failed to find the Vulkan loader");
       }
-
-      PointerBuffer requiredExtensions = glfwGetRequiredInstanceExtensions();
-      if (requiredExtensions == null) {
-         throw new AssertionError("Failed to find list of required Vulkan extensions");
-      }
-
-      createInstance(requiredExtensions);
-      
-      setupDebugging(instance, VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT, new VkDebugReportCallbackEXT() {
-         @Override
-         public int invoke(int flags, int objectType, long object, long location, int messageCode, long pLayerPrefix, long pMessage, long pUserData) {
-            System.err.println("ERROR OCCURED: " + VkDebugReportCallbackEXT.getString(pMessage));
-            return 0;
-         }
-      });
-      
-      createWindow();
-      
-      getPhysicalDevices();
    }
    
-   private void createWindow() {
+   public static Windu createWindu() {
+      Windu windu = new Windu();
+      windu.init();
+      return windu;
+   }
+   
+   private void init() {
       // Create GLFW window
       glfwDefaultWindowHints();
       glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
       glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-      window = glfwCreateWindow(800, 600, "GLFW Vulkan Demo", NULL, NULL);
+      window = glfwCreateWindow(width, height, "GLFW Vulkan Demo", NULL, NULL);
       glfwSetKeyCallback(window, new GLFWKeyCallback() {
          @Override
          public void invoke(long window, int key, int scancode, int action, int mods) {
@@ -67,10 +51,12 @@ public final class Windu {
       });
       try(MemoryStack stack = stackPush()) {
          LongBuffer pSurface = stack.mallocLong(1);
-         vkAssert(glfwCreateWindowSurface(instance, window, null, pSurface));
+         vkAssert(glfwCreateWindowSurface(instance.vulkan, window, null, pSurface));
          surface = pSurface.get(0);
       }
-      
+   }
+   
+   public void show() {
       // Handle canvas resize
       glfwSetWindowSizeCallback(window, new GLFWWindowSizeCallback() {
          @Override
@@ -78,8 +64,8 @@ public final class Windu {
             if (width <= 0 || height <= 0) {
                return;
             }
-            Windu.width = width;
-            Windu.height = height;
+            Context.win.width = width;
+            Context.win.height = height;
             //swapchainRecreator.mustRecreate = true;
          }
       });
@@ -94,7 +80,6 @@ public final class Windu {
    }
    
    public void dispose() {
-      Context.dispose();
       glfwDestroyWindow(window);
       glfwTerminate();
    }

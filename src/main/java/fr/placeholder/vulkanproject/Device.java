@@ -1,29 +1,29 @@
 package fr.placeholder.vulkanproject;
 
-import static fr.placeholder.vulkanproject.Context.*;
+import static fr.placeholder.vulkanproject.Context.instance;
+import static fr.placeholder.vulkanproject.Context.win;
 import static fr.placeholder.vulkanproject.Utils.vkAssert;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
-import java.sql.DriverManager;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.*;
-import static org.lwjgl.vulkan.EXTDebugReport.VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
 import static org.lwjgl.vulkan.KHRSurface.vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
 import static org.lwjgl.vulkan.KHRSurface.vkGetPhysicalDeviceSurfaceFormatsKHR;
 import static org.lwjgl.vulkan.KHRSurface.vkGetPhysicalDeviceSurfacePresentModesKHR;
 import static org.lwjgl.vulkan.KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 import static org.lwjgl.vulkan.VK10.*;
 import org.lwjgl.vulkan.*;
+import static org.lwjgl.vulkan.KHRSurface.vkGetPhysicalDeviceSurfaceSupportKHR;
 
 public class Device {
 
-   public static void getPhysicalDevices() {
+   public static Device getPhysicalDevices() {
       IntBuffer pnum = memAllocInt(1);
       
-      vkAssert(vkEnumeratePhysicalDevices(instance, pnum, null));
+      vkAssert(vkEnumeratePhysicalDevices(instance.vulkan, pnum, null));
       int numDevices = pnum.get(0);
       if (numDevices <= 0) {
          throw new AssertionError("No devices were found");
@@ -31,14 +31,14 @@ public class Device {
 
       PointerBuffer pdevices = memAllocPointer(pnum.get(0));
 
-      vkAssert(vkEnumeratePhysicalDevices(instance, pnum, pdevices));
+      vkAssert(vkEnumeratePhysicalDevices(instance.vulkan, pnum, pdevices));
 
       Device[] devices = new Device[pnum.get(0)];
 
       //Get properties of each devices and get highest index score
       int max = 0, index = -1;
       for (int i = 0; i < numDevices; ++i) {
-         VkPhysicalDevice idevice = new VkPhysicalDevice(pdevices.get(0), instance);
+         VkPhysicalDevice idevice = new VkPhysicalDevice(pdevices.get(0), instance.vulkan);
          devices[i] = new Device(idevice);
          int score = devices[i].getScore();
          if (score >= max) {
@@ -57,11 +57,12 @@ public class Device {
          }
       }
       
-      Context.device = devices[index];
-      Context.device.select();
+      devices[index].select();
       
       memFree(pnum);
       memFree(pdevices);
+      
+      return devices[index];
    }
 
    public VkPhysicalDevice physical;
@@ -73,6 +74,8 @@ public class Device {
    }
    
    public void select() {
+      getProperties();
+      
       try(MemoryStack stack = stackPush()) {
          
          IntBuffer pnum = stack.mallocInt(1);
@@ -125,8 +128,8 @@ public class Device {
          ppEnabledExtensionNames.put(stack.UTF8(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
          ppEnabledExtensionNames.flip();
          
-         PointerBuffer ppEnabledLayerNames = stack.mallocPointer(enabledLayerNames.length);
-         for(String s : enabledLayerNames) ppEnabledLayerNames.put(stack.UTF8(s));
+         PointerBuffer ppEnabledLayerNames = stack.mallocPointer(instance.enabledLayerNames.length);
+         for(String s : instance.enabledLayerNames) ppEnabledLayerNames.put(stack.UTF8(s));
          ppEnabledLayerNames.flip();
          
          // Put it all together.
@@ -165,38 +168,8 @@ public class Device {
          // VkQueueFamilyProperties
          vkGetPhysicalDeviceQueueFamilyProperties(physical, pnum, null);
 
-         VkQueueFamilyProperties.Buffer pqueueProperties = VkQueueFamilyProperties.mallocStack(pnum.get(0), stack);
+         pqueueProperties = VkQueueFamilyProperties.mallocStack(pnum.get(0), stack);
          vkGetPhysicalDeviceQueueFamilyProperties(physical, pnum, pqueueProperties);
-
-         // VkExtensionProperties
-         vkAssert(vkEnumerateDeviceExtensionProperties(physical, (ByteBuffer) null, pnum, null));
-
-         VkExtensionProperties.Buffer pextensionProperties = VkExtensionProperties.mallocStack(pnum.get(0), stack);
-         vkAssert(vkEnumerateDeviceExtensionProperties(physical, (ByteBuffer) null, pnum, pextensionProperties));
-
-         // VkSurfaceCapabilitiesKHR
-         VkSurfaceCapabilitiesKHR surfaceCapabilities = VkSurfaceCapabilitiesKHR.mallocStack(stack);
-         vkAssert(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical, surface, surfaceCapabilities));
-
-         // VkSurfaceFormatKHR
-         vkAssert(vkGetPhysicalDeviceSurfaceFormatsKHR(physical, surface, pnum, null));
-
-         VkSurfaceFormatKHR.Buffer psurfaceFormat = VkSurfaceFormatKHR.mallocStack(pnum.get(0), stack);
-         vkAssert(vkGetPhysicalDeviceSurfaceFormatsKHR(physical, surface, pnum, psurfaceFormat));
-
-         // SurfacePresentModesKHR (is an IntBuffer)
-         vkAssert(vkGetPhysicalDeviceSurfacePresentModesKHR(physical, surface, pnum, null));
-
-         IntBuffer psurfacePresentModes = stack.mallocInt(pnum.get(0));
-         vkAssert(vkGetPhysicalDeviceSurfacePresentModesKHR(physical, surface, pnum, psurfacePresentModes));
-
-         // VkPhysicalDeviceMemoryProperties
-         VkPhysicalDeviceMemoryProperties memoryProperties = VkPhysicalDeviceMemoryProperties.mallocStack(stack);
-         vkGetPhysicalDeviceMemoryProperties(physical, memoryProperties);
-
-         // VkPhysicalDeviceProperties
-         VkPhysicalDeviceProperties properties = VkPhysicalDeviceProperties.mallocStack(stack);
-         vkGetPhysicalDeviceProperties(physical, properties);
          
          //TODO use properties to calculate if a device is not suitable (<0) or rate it's suitability (>=0)
          
@@ -215,12 +188,71 @@ public class Device {
          
          if(graphicsQueueIndex<0 || computeQueueIndex<0 || transferQueueIndex<0) return -1;
          
+         IntBuffer pSupported = stack.mallocInt(1);
+         vkAssert(vkGetPhysicalDeviceSurfaceSupportKHR(physical, graphicsQueueIndex, win.surface, pSupported));
+         if(pSupported.get(0) == VK_FALSE) return -1;
          
       }
       return score;
    }
+   
+   VkQueueFamilyProperties.Buffer pqueueProperties;
+   VkExtensionProperties.Buffer pextensionProperties;
+   VkSurfaceCapabilitiesKHR surfaceCapabilities;
+   VkSurfaceFormatKHR.Buffer psurfaceFormat;
+   IntBuffer psurfacePresentModes;
+   VkPhysicalDeviceMemoryProperties memoryProperties;
+   VkPhysicalDeviceProperties properties;
+   
+   private void getProperties() {
+      IntBuffer pnum = memAllocInt(1);
+      
+      // VkQueueFamilyProperties
+      vkGetPhysicalDeviceQueueFamilyProperties(physical, pnum, null);
+
+      pqueueProperties = VkQueueFamilyProperties.malloc(pnum.get(0));
+      vkGetPhysicalDeviceQueueFamilyProperties(physical, pnum, pqueueProperties);
+
+      // VkExtensionProperties
+      vkAssert(vkEnumerateDeviceExtensionProperties(physical, (ByteBuffer) null, pnum, null));
+
+      pextensionProperties = VkExtensionProperties.malloc(pnum.get(0));
+      vkAssert(vkEnumerateDeviceExtensionProperties(physical, (ByteBuffer) null, pnum, pextensionProperties));
+
+      // VkSurfaceCapabilitiesKHR
+      surfaceCapabilities = VkSurfaceCapabilitiesKHR.malloc();
+      vkAssert(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical, win.surface, surfaceCapabilities));
+
+      // VkSurfaceFormatKHR
+      vkAssert(vkGetPhysicalDeviceSurfaceFormatsKHR(physical, win.surface, pnum, null));
+      
+      psurfaceFormat = VkSurfaceFormatKHR.malloc(pnum.get(0));
+      vkAssert(vkGetPhysicalDeviceSurfaceFormatsKHR(physical, win.surface, pnum, psurfaceFormat));
+
+      // SurfacePresentModesKHR (is an IntBuffer)
+      vkAssert(vkGetPhysicalDeviceSurfacePresentModesKHR(physical, win.surface, pnum, null));
+      
+      psurfacePresentModes = memAllocInt(pnum.get(0));
+      vkAssert(vkGetPhysicalDeviceSurfacePresentModesKHR(physical, win.surface, pnum, psurfacePresentModes));
+
+      // VkPhysicalDeviceMemoryProperties
+      memoryProperties = VkPhysicalDeviceMemoryProperties.malloc();
+      vkGetPhysicalDeviceMemoryProperties(physical, memoryProperties);
+
+      // VkPhysicalDeviceProperties
+      properties = VkPhysicalDeviceProperties.malloc();
+      vkGetPhysicalDeviceProperties(physical, properties);
+   }
 
    public void dispose() {
+      pqueueProperties.free();
+      pextensionProperties.free();
+      surfaceCapabilities.free();
+      psurfaceFormat.free();
+      memFree(psurfacePresentModes);
+      memoryProperties.free();
+      properties.free();
+      
       vkDestroyDevice(logical, null);
    }
 

@@ -1,76 +1,49 @@
 package fr.placeholder.vulkanproject;
 
-import static fr.placeholder.vulkanproject.Utils.*;
-import org.lwjgl.PointerBuffer;
+import static fr.placeholder.vulkanproject.Device.getPhysicalDevices;
+import static fr.placeholder.vulkanproject.Instance.createInstance;
+import static fr.placeholder.vulkanproject.SwapChain.createSwapChain;
+import static fr.placeholder.vulkanproject.Windu.createWindu;
+import static fr.placeholder.vulkanproject.Windu.initGLFWContext;
 import org.lwjgl.vulkan.*;
-import static org.lwjgl.vulkan.VK10.*;
-import java.nio.LongBuffer;
-import org.lwjgl.system.MemoryStack;
-import static org.lwjgl.system.MemoryStack.stackPush;
-import static org.lwjgl.system.MemoryUtil.NULL;
 
 import static org.lwjgl.vulkan.EXTDebugReport.*;
 
 public class Context {
 
-   public static VkInstance instance;
-   public static long debugCallback;
-   public static long surface;
+   public static Instance instance;
+   public static Windu win;
    public static Device device;
+   public static SwapChain swap;
    
-   public static String[] enabledExtensionNames = {VK_EXT_DEBUG_REPORT_EXTENSION_NAME};
-   public static String[] enabledLayerNames = {"VK_LAYER_LUNARG_standard_validation"};
-
-   protected static void createInstance(PointerBuffer requiredExtensions) {
-      try (MemoryStack stack = stackPush()) {
-         VkApplicationInfo appInfo = VkApplicationInfo.mallocStack(stack)
-                 .sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)
-                 .pApplicationName(stack.UTF8("GLFW Vulkan Demo"))
-                 .pEngineName(stack.UTF8("Vulkanite"))
-                 .apiVersion(VK_MAKE_VERSION(1, 1, 0));
-
-         PointerBuffer ppEnabledExtensionNames = stack.mallocPointer(requiredExtensions.remaining() + enabledLayerNames.length);
-         ppEnabledExtensionNames.put(requiredExtensions);
-         for(String s : enabledExtensionNames) ppEnabledExtensionNames.put(stack.UTF8(s));
-         ppEnabledExtensionNames.flip();
-
-         PointerBuffer ppEnabledLayerNames = stack.mallocPointer(enabledLayerNames.length);
-         for(String s : enabledLayerNames) ppEnabledLayerNames.put(stack.UTF8(s));
-         ppEnabledLayerNames.flip();
-
-         VkInstanceCreateInfo pCreateInfo = VkInstanceCreateInfo.mallocStack(stack)
-                 .sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO)
-                 .pNext(NULL)
-                 .pApplicationInfo(appInfo)
-                 .ppEnabledExtensionNames(ppEnabledExtensionNames)
-                 .ppEnabledLayerNames(ppEnabledLayerNames);
-
-         PointerBuffer pInstance = stack.mallocPointer(1);
-         vkAssert(vkCreateInstance(pCreateInfo, null, pInstance));
-
-         instance = new VkInstance(pInstance.get(0), pCreateInfo);
-      }
-   }
-
-   protected static void setupDebugging(VkInstance instance, int flags, VkDebugReportCallbackEXT callback) {
-      try (MemoryStack stack = stackPush()) {
-         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = VkDebugReportCallbackCreateInfoEXT.mallocStack(stack)
-                 .sType(VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT)
-                 .pNext(NULL)
-                 .pfnCallback(callback)
-                 .pUserData(NULL)
-                 .flags(flags);
-         LongBuffer pCallback = stack.mallocLong(1);
-         vkAssert(vkCreateDebugReportCallbackEXT(instance, dbgCreateInfo, null, pCallback));
-         
-         debugCallback = pCallback.get(0);
-      }
+   public static void init() {
+      initGLFWContext();
+      
+      instance = createInstance();
+      
+      instance.setupDebugging(VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT, new VkDebugReportCallbackEXT() {
+         @Override
+         public int invoke(int flags, int objectType, long object, long location, int messageCode, long pLayerPrefix, long pMessage, long pUserData) {
+            System.err.println("ERROR OCCURED: " + VkDebugReportCallbackEXT.getString(pMessage));
+            return 0;
+         }
+      });
+      
+      win = createWindu();
+      
+      device = getPhysicalDevices();
+      
+      swap = createSwapChain();
+      
+      win.show();
+      
    }
 
    protected static void dispose() {
+      swap.dispose();
       device.dispose();
-      vkDestroyDebugReportCallbackEXT(instance, debugCallback, null);
-      vkDestroyInstance(instance, null);
+      win.dispose();
+      instance.dispose();
    }
 
 }
