@@ -1,5 +1,13 @@
 package fr.placeholder.vulkanproject;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import static org.lwjgl.vulkan.EXTDebugReport.VK_ERROR_VALIDATION_FAILED_EXT;
 import static org.lwjgl.vulkan.KHRDisplaySwapchain.VK_ERROR_INCOMPATIBLE_DISPLAY_KHR;
 import static org.lwjgl.vulkan.KHRSurface.VK_ERROR_NATIVE_WINDOW_IN_USE_KHR;
@@ -11,11 +19,11 @@ import static org.lwjgl.vulkan.VK10.*;
 public class Utils {
 
    public static void vkAssert(int result) {
-      if(result != VK_SUCCESS) {
+      if (result != VK_SUCCESS) {
          throw new AssertionError("Error : " + translateVulkanResult(result));
       }
    }
-   
+
    /**
     * Translates a Vulkan {@code VkResult} value to a String describing the
     * result.
@@ -78,6 +86,17 @@ public class Utils {
             return "A validation layer found an error.";
          default:
             return String.format("%s [%d]", "Unknown", Integer.valueOf(result));
+      }
+   }
+
+   public static ByteBuffer getResource(String path) {
+      try (RandomAccessFile aFile = new RandomAccessFile(path, "r"); FileChannel inChannel = aFile.getChannel()) {
+         MappedByteBuffer buffer = inChannel.map(FileChannel.MapMode.READ_ONLY, 0, inChannel.size());
+         buffer.load();
+         return buffer;
+      } catch (IOException ex) {
+         Logger.getLogger(Utils.class.getName()).log(Level.SEVERE, null, ex);
+         return null;
       }
    }
 }

@@ -68,6 +68,7 @@ public class Device {
    public VkPhysicalDevice physical;
    public VkDevice logical;
    public VkQueue graphics, compute, transfer;
+   public int graphicsI = -1, computeI = -1, transferI = -1;
 
    private Device(VkPhysicalDevice d) {
       this.physical = d;
@@ -90,7 +91,7 @@ public class Device {
             indices[i] = new boolean[pqueueProperties.get(i).queueCount()];
          }
          
-         int graphicsI = 0, graphicsJ = 0;
+         int graphicsJ = 0;
          for(int i = 0; i<qfc; i++) {
             if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT) {
                graphicsI = i;
@@ -99,7 +100,7 @@ public class Device {
             }
          }
          
-         int computeI = -1, computeJ = -1;
+         int computeJ = -1;
          for(int i = 0; i<qfc; i++) {
             if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT) {
                for(int j = 0; j<indices[i].length; j++) {
@@ -113,7 +114,7 @@ public class Device {
             }
          }
          
-         int transferI = -1, transferJ = -1;
+         int transferJ = -1;
          for(int i = 0; i<qfc; i++) {
             if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_TRANSFER_BIT) == VK_QUEUE_TRANSFER_BIT) {
                for(int j = 0; j<indices[i].length; j++) {

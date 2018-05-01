@@ -6,7 +6,6 @@ import static fr.placeholder.vulkanproject.Utils.vkAssert;
 import java.nio.LongBuffer;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
-import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.KHRSwapchain.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 import static org.lwjgl.vulkan.VK10.*;
 import org.lwjgl.vulkan.VkAttachmentDescription;
@@ -32,7 +31,7 @@ public class RenderPass {
                  .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
                  .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
                  .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-                 .finalLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+                 .finalLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
          // Now we enumerate the attachments for a subpass.  We have to have at least one subpass.
          VkAttachmentReference.Buffer colorRef = VkAttachmentReference.callocStack(1, stack)

@@ -1,18 +1,21 @@
 package fr.placeholder.vulkanproject;
 
 import static fr.placeholder.vulkanproject.Context.device;
+import static fr.placeholder.vulkanproject.Context.render;
 import static fr.placeholder.vulkanproject.Context.win;
 import static fr.placeholder.vulkanproject.Utils.vkAssert;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
+import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.KHRSurface.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 import static org.lwjgl.vulkan.KHRSurface.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 import static org.lwjgl.vulkan.KHRSurface.VK_PRESENT_MODE_FIFO_KHR;
 import static org.lwjgl.vulkan.KHRSurface.VK_PRESENT_MODE_MAILBOX_KHR;
 import static org.lwjgl.vulkan.KHRSurface.VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 import static org.lwjgl.vulkan.KHRSwapchain.*;
+import org.lwjgl.vulkan.VK10;
 import static org.lwjgl.vulkan.VK10.VK_COMPONENT_SWIZZLE_A;
 import static org.lwjgl.vulkan.VK10.VK_COMPONENT_SWIZZLE_B;
 import static org.lwjgl.vulkan.VK10.VK_COMPONENT_SWIZZLE_G;
@@ -23,10 +26,14 @@ import static org.lwjgl.vulkan.VK10.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 import static org.lwjgl.vulkan.VK10.VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 import static org.lwjgl.vulkan.VK10.VK_IMAGE_VIEW_TYPE_2D;
 import static org.lwjgl.vulkan.VK10.VK_SHARING_MODE_EXCLUSIVE;
+import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+import static org.lwjgl.vulkan.VK10.vkCreateFramebuffer;
 import static org.lwjgl.vulkan.VK10.vkCreateImageView;
+import static org.lwjgl.vulkan.VK10.vkDestroyFramebuffer;
 import static org.lwjgl.vulkan.VK10.vkDestroyImageView;
 import org.lwjgl.vulkan.VkExtent2D;
+import org.lwjgl.vulkan.VkFramebufferCreateInfo;
 import org.lwjgl.vulkan.VkImageViewCreateInfo;
 import org.lwjgl.vulkan.VkSurfaceFormatKHR;
 import org.lwjgl.vulkan.VkSwapchainCreateInfoKHR;
@@ -47,6 +54,7 @@ public class SwapChain {
    public int presentMode;
    public VkExtent2D extent;
    
+   public long[] framebuffers;
    
    /*
    =============
@@ -189,7 +197,33 @@ public class SwapChain {
       }
    }
    
+   public void createFrameBuffers() {
+      try(MemoryStack stack = stackPush()) {
+        LongBuffer attachments = stack.mallocLong(1);
+        VkFramebufferCreateInfo fci = VkFramebufferCreateInfo.callocStack()
+                .sType(VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO)
+                .pAttachments(attachments)
+                .flags(0)
+                .height(extent.height())
+                .width(extent.width())
+                .layers(1)
+                .pNext(NULL)
+                .renderPass(render.pass);
+        // Create a framebuffer for each swapchain image
+        framebuffers = new long[NUM_FRAMES];
+        LongBuffer pFramebuffer = stack.mallocLong(1);
+        for (int i = 0; i < NUM_FRAMES; i++) {
+            attachments.put(0, imageViews[i]);
+            vkAssert(vkCreateFramebuffer(device.logical, fci, null, pFramebuffer));
+            long framebuffer = pFramebuffer.get(0);
+            framebuffers[i] = framebuffer;
+        }
+      }
+    }
+   
    public void dispose() {
+      vkDestroyFramebuffer(device.logical, framebuffers[0], null);
+      vkDestroyFramebuffer(device.logical, framebuffers[1], null);
       vkDestroyImageView(device.logical, imageViews[0], null);
       vkDestroyImageView(device.logical, imageViews[1], null);
       vkDestroySwapchainKHR(device.logical, chain, null);
