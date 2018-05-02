@@ -1,6 +1,7 @@
 package fr.placeholder.vulkanproject;
 
 import static fr.placeholder.vulkanproject.Context.device;
+import static fr.placeholder.vulkanproject.Context.pool;
 import static fr.placeholder.vulkanproject.Context.render;
 import static fr.placeholder.vulkanproject.Context.win;
 import static fr.placeholder.vulkanproject.Utils.vkAssert;
@@ -15,7 +16,6 @@ import static org.lwjgl.vulkan.KHRSurface.VK_PRESENT_MODE_FIFO_KHR;
 import static org.lwjgl.vulkan.KHRSurface.VK_PRESENT_MODE_MAILBOX_KHR;
 import static org.lwjgl.vulkan.KHRSurface.VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 import static org.lwjgl.vulkan.KHRSwapchain.*;
-import org.lwjgl.vulkan.VK10;
 import static org.lwjgl.vulkan.VK10.VK_COMPONENT_SWIZZLE_A;
 import static org.lwjgl.vulkan.VK10.VK_COMPONENT_SWIZZLE_B;
 import static org.lwjgl.vulkan.VK10.VK_COMPONENT_SWIZZLE_G;
@@ -32,6 +32,7 @@ import static org.lwjgl.vulkan.VK10.vkCreateFramebuffer;
 import static org.lwjgl.vulkan.VK10.vkCreateImageView;
 import static org.lwjgl.vulkan.VK10.vkDestroyFramebuffer;
 import static org.lwjgl.vulkan.VK10.vkDestroyImageView;
+import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkExtent2D;
 import org.lwjgl.vulkan.VkFramebufferCreateInfo;
 import org.lwjgl.vulkan.VkImageViewCreateInfo;
@@ -45,22 +46,20 @@ public class SwapChain {
       swapchain.init();
       return swapchain;
    }
-   
+
    public static int NUM_FRAMES = 2;
-   
+
    public long chain;
    public long[] images = new long[NUM_FRAMES], imageViews = new long[NUM_FRAMES];
    public VkSurfaceFormatKHR surfaceFormat;
    public int presentMode;
    public VkExtent2D extent;
-   
-   public long[] framebuffers;
-   
+
    /*
    =============
    ChooseSurfaceFormat
    =============
-   */
+    */
    VkSurfaceFormatKHR chooseSurfaceFormat() {
       VkSurfaceFormatKHR.Buffer formats = device.psurfaceFormat;
 
@@ -79,12 +78,12 @@ public class SwapChain {
    =============
    ChoosePresentMode
    =============
-   */
+    */
    int choosePresentMode() {
       int desiredMode = VK_PRESENT_MODE_MAILBOX_KHR;
-      
+
       IntBuffer modes = device.psurfacePresentModes;
-      
+
       // Favor looking for mailbox mode.
       for (int i = 0; i < modes.capacity(); i++) {
          if (modes.get(i) == desiredMode) {
@@ -100,7 +99,7 @@ public class SwapChain {
    =============
    ChooseSurfaceExtent
    =============
-   */
+    */
    VkExtent2D chooseSurfaceExtent() {
       VkExtent2D extent = device.surfaceCapabilities.currentExtent();
 
@@ -118,9 +117,9 @@ public class SwapChain {
    =============
    CreateSwapChain
    =============
-   */
+    */
    private void init() {
-      try(MemoryStack stack = stackPush()) {
+      try (MemoryStack stack = stackPush()) {
          // Take our selected gpu and pick three things.
          // 1.) Surface format as described earlier.
          // 2.) Present mode. Again refer to documentation I shared.
@@ -128,7 +127,7 @@ public class SwapChain {
          surfaceFormat = chooseSurfaceFormat();
          presentMode = choosePresentMode();
          extent = chooseSurfaceExtent();
-         
+
          VkSwapchainCreateInfoKHR info = VkSwapchainCreateInfoKHR.callocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR)
                  .surface(win.surface)
@@ -143,13 +142,12 @@ public class SwapChain {
                  .compositeAlpha(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
                  .presentMode(presentMode)
                  .clipped(true); // Is Vulkan allowed to discard operations outside of the renderable space?
-         
-         
+
          LongBuffer swapchain = stack.mallocLong(1);
          // Create the swapchain
-         vkAssert(vkCreateSwapchainKHR(device.logical,  info, null, swapchain));
+         vkAssert(vkCreateSwapchainKHR(device.logical, info, null, swapchain));
          chain = swapchain.get(0);
-         
+
          // Retrieve the swapchain images from the device.
          IntBuffer pnum = stack.mallocInt(1);
          vkAssert(vkGetSwapchainImagesKHR(device.logical, chain, pnum, null));
@@ -157,7 +155,7 @@ public class SwapChain {
          vkAssert(vkGetSwapchainImagesKHR(device.logical, chain, pnum, pimages));
          images[0] = pimages.get(0);
          images[1] = pimages.get(1);
-         
+
          // New concept - Image Views
          // Much like the logical device is an interface to the physical device,
          // image views are interfaces to actual images.  Think of it as this.
@@ -170,7 +168,7 @@ public class SwapChain {
                     .viewType(VK_IMAGE_VIEW_TYPE_2D)
                     .format(surfaceFormat.format())
                     .flags(0);
-            
+
             imageViewCreateInfo.components()
                     .r(VK_COMPONENT_SWIZZLE_R)
                     .g(VK_COMPONENT_SWIZZLE_G)
@@ -191,42 +189,17 @@ public class SwapChain {
 
             // Create the view
             LongBuffer imageView = stack.mallocLong(1);
-            vkAssert(vkCreateImageView(device.logical,  imageViewCreateInfo, null,  imageView));
+            vkAssert(vkCreateImageView(device.logical, imageViewCreateInfo, null, imageView));
             imageViews[i] = imageView.get(0);
          }
       }
+
    }
-   
-   public void createFrameBuffers() {
-      try(MemoryStack stack = stackPush()) {
-        LongBuffer attachments = stack.mallocLong(1);
-        VkFramebufferCreateInfo fci = VkFramebufferCreateInfo.callocStack()
-                .sType(VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO)
-                .pAttachments(attachments)
-                .flags(0)
-                .height(extent.height())
-                .width(extent.width())
-                .layers(1)
-                .pNext(NULL)
-                .renderPass(render.pass);
-        // Create a framebuffer for each swapchain image
-        framebuffers = new long[NUM_FRAMES];
-        LongBuffer pFramebuffer = stack.mallocLong(1);
-        for (int i = 0; i < NUM_FRAMES; i++) {
-            attachments.put(0, imageViews[i]);
-            vkAssert(vkCreateFramebuffer(device.logical, fci, null, pFramebuffer));
-            long framebuffer = pFramebuffer.get(0);
-            framebuffers[i] = framebuffer;
-        }
-      }
-    }
-   
+
    public void dispose() {
-      vkDestroyFramebuffer(device.logical, framebuffers[0], null);
-      vkDestroyFramebuffer(device.logical, framebuffers[1], null);
       vkDestroyImageView(device.logical, imageViews[0], null);
       vkDestroyImageView(device.logical, imageViews[1], null);
       vkDestroySwapchainKHR(device.logical, chain, null);
    }
-  
+
 }

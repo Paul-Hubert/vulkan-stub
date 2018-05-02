@@ -39,15 +39,15 @@ public class Context {
       
       device = getPhysicalDevices();
       
+      pool = createCommandPool();
+      
       swap = createSwapChain();
       
       render = createRenderPass();
       
-      swap.createFrameBuffers();
-      
       pipe = createPipeline();
       
-      pool = createCommandPool();
+      render.createRenderCommandBuffers();
       
       win.show();
       
