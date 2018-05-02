@@ -1,10 +1,9 @@
-package fr.placeholder.vulkanproject;
+package fr.placeholder.terrain;
 
+import fr.placeholder.vulkanproject.Utils;
 import static fr.placeholder.vulkanproject.Context.device;
-import static fr.placeholder.vulkanproject.Context.render;
 import static fr.placeholder.vulkanproject.Context.swap;
 import static fr.placeholder.vulkanproject.Utils.vkAssert;
-import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
@@ -30,9 +29,7 @@ import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STA
 import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 import static org.lwjgl.vulkan.VK10.vkCreatePipelineLayout;
-import static org.lwjgl.vulkan.VK10.vkCreateShaderModule;
 import static org.lwjgl.vulkan.VK10.vkDestroyPipeline;
 import static org.lwjgl.vulkan.VK10.vkDestroyPipelineLayout;
 import static org.lwjgl.vulkan.VK10.vkDestroyShaderModule;
@@ -48,22 +45,15 @@ import org.lwjgl.vulkan.VkPipelineShaderStageCreateInfo;
 import org.lwjgl.vulkan.VkPipelineVertexInputStateCreateInfo;
 import org.lwjgl.vulkan.VkPipelineViewportStateCreateInfo;
 import org.lwjgl.vulkan.VkRect2D;
-import org.lwjgl.vulkan.VkShaderModuleCreateInfo;
 import org.lwjgl.vulkan.VkViewport;
 
-public class Pipeline {
-
-   public static Pipeline createPipeline() {
-      Pipeline line = new Pipeline();
-      line.init();
-      return line;
-   }
+public class TerrainPipeline {
    
    public long line;
    public long layout;
 
-   private void init() {
-      long vertexShader = loadShader("src/main/resources/vert.spv"), fragmentShader = loadShader("src/main/resources/frag.spv");
+   public void init(long renderpass, int subpass) {
+      long vertexShader = Utils.loadShader("src/main/resources/vert.spv"), fragmentShader = Utils.loadShader("src/main/resources/frag.spv");
       
       try(MemoryStack stack = stackPush()) {
       
@@ -156,38 +146,23 @@ public class Pipeline {
                  .pColorBlendState(colorBlending)
                  .pDynamicState(null)
                  .layout(layout)
-                 .renderPass(render.pass)
-                 .subpass(0)
+                 .renderPass(renderpass)
+                 .subpass(subpass)
                  .basePipelineHandle(NULL)
                  .basePipelineIndex(-1);
          
          LongBuffer graphicsPipeline = stack.mallocLong(1);
          vkAssert(VK10.vkCreateGraphicsPipelines(device.logical, NULL, pipelineInfo, null, graphicsPipeline));
          line = graphicsPipeline.get(0);
-         
       }
       
       vkDestroyShaderModule(device.logical, fragmentShader, null);
       vkDestroyShaderModule(device.logical, vertexShader, null);
-   }
-
-   private static long loadShader(String path) {
-      ByteBuffer shaderCode = Utils.getResource(path);
-      try (MemoryStack stack = stackPush()) {
-         VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo.callocStack(stack)
-                 .sType(VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
-                 .pCode(shaderCode)
-                 .flags(0);
-         LongBuffer pShaderModule = stack.mallocLong(1);
-         vkAssert(vkCreateShaderModule(device.logical, moduleCreateInfo, null, pShaderModule));
-         long shaderModule = pShaderModule.get(0);
-         return shaderModule;
-      }
+      vkDestroyPipelineLayout(device.logical, layout, null);
    }
 
    public void dispose() {
       vkDestroyPipeline(device.logical, line, null);
-      vkDestroyPipelineLayout(device.logical, layout, null);
    }
 
 }

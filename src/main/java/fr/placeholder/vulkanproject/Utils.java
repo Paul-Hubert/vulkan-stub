@@ -1,13 +1,16 @@
 package fr.placeholder.vulkanproject;
 
-import java.io.FileNotFoundException;
+import static fr.placeholder.vulkanproject.Context.device;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.LongBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.lwjgl.system.MemoryStack;
+import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.vulkan.EXTDebugReport.VK_ERROR_VALIDATION_FAILED_EXT;
 import static org.lwjgl.vulkan.KHRDisplaySwapchain.VK_ERROR_INCOMPATIBLE_DISPLAY_KHR;
 import static org.lwjgl.vulkan.KHRSurface.VK_ERROR_NATIVE_WINDOW_IN_USE_KHR;
@@ -15,6 +18,7 @@ import static org.lwjgl.vulkan.KHRSurface.VK_ERROR_SURFACE_LOST_KHR;
 import static org.lwjgl.vulkan.KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR;
 import static org.lwjgl.vulkan.KHRSwapchain.VK_SUBOPTIMAL_KHR;
 import static org.lwjgl.vulkan.VK10.*;
+import org.lwjgl.vulkan.VkShaderModuleCreateInfo;
 
 public class Utils {
 
@@ -97,6 +101,20 @@ public class Utils {
       } catch (IOException ex) {
          Logger.getLogger(Utils.class.getName()).log(Level.SEVERE, null, ex);
          return null;
+      }
+   }
+   
+   public static long loadShader(String path) {
+      ByteBuffer shaderCode = Utils.getResource(path);
+      try (MemoryStack stack = stackPush()) {
+         VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo.callocStack(stack)
+                 .sType(VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
+                 .pCode(shaderCode)
+                 .flags(0);
+         LongBuffer pShaderModule = stack.mallocLong(1);
+         vkAssert(vkCreateShaderModule(device.logical, moduleCreateInfo, null, pShaderModule));
+         long shaderModule = pShaderModule.get(0);
+         return shaderModule;
       }
    }
 }

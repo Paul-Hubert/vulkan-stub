@@ -1,22 +1,39 @@
 package fr.placeholder.terrain;
 
-import fr.placeholder.vulkanproject.Renderer;
+import static org.lwjgl.vulkan.VK10.VK_PIPELINE_BIND_POINT_GRAPHICS;
+import static org.lwjgl.vulkan.VK10.vkCmdBindPipeline;
+import static org.lwjgl.vulkan.VK10.vkCmdDraw;
+import org.lwjgl.vulkan.VkCommandBuffer;
 
-public class Terrain implements Renderer {
+public class Terrain {
 
-   @Override
    public void init() {
       
+      pipe = new TerrainPipeline();
+      
+      
+   }
+   
+   private TerrainPipeline pipe; 
+   
+   public void prepare(long renderpass, int subpass) {
+      pipe.init(renderpass, subpass);
+   }
+   
+   public void draw(VkCommandBuffer commandBuffer) {
+      vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.line);
+      
+      vkCmdDraw(commandBuffer, 3, 1, 0, 0);
    }
 
-   @Override
-   public void render() {
+   public void update() {
+      
+      
       
    }
 
-   @Override
    public void dispose() {
-      
+      pipe.dispose();
    }
    
 }
