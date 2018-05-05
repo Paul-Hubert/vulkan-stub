@@ -2,11 +2,7 @@ package fr.placeholder.vulkanproject;
 
 import fr.placeholder.terrain.Terrain;
 import static fr.placeholder.vulkanproject.Context.device;
-import static fr.placeholder.vulkanproject.Context.swap;
 import static fr.placeholder.vulkanproject.Context.win;
-import static org.lwjgl.glfw.GLFW.glfwPollEvents;
-import static org.lwjgl.glfw.GLFW.glfwWindowShouldClose;
-import org.lwjgl.vulkan.VK10;
 import static org.lwjgl.vulkan.VK10.vkDeviceWaitIdle;
 import static org.lwjgl.vulkan.VK10.vkQueueWaitIdle;
 
@@ -30,18 +26,15 @@ public class Main {
       terrain.init();
       
       render = new RenderPass();
-      
       renderer = new Renderer();
       renderer.init();
       
+      Orchestrator.init();
    }
 
    private void run() {
-      while (!glfwWindowShouldClose(win.window)) {
-         glfwPollEvents();
-         terrain.update();
-         renderer.render();
-      }
+      win.show();
+      Orchestrator.run();
    }
 
    private void dispose() {

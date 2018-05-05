@@ -7,36 +7,48 @@ import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 import static org.lwjgl.vulkan.VK10.vkAllocateMemory;
+import static org.lwjgl.vulkan.VK10.vkFreeMemory;
+import static org.lwjgl.vulkan.VK10.vkGetBufferMemoryRequirements;
 import org.lwjgl.vulkan.VkMemoryAllocateInfo;
-import org.lwjgl.vulkan.VkPhysicalDeviceMemoryProperties;
+import org.lwjgl.vulkan.VkMemoryRequirements;
 
 public class Memory {
-   
+
    public long ptr;
-   
-   public Memory(long size, int properties) {
-      try(MemoryStack stack = stackPush()) {
+   public long size;
+
+   public Memory(long size, int properties, GPUBuffer buf) {
+      try (MemoryStack stack = stackPush()) {
+         this.size = size;
+         VkMemoryRequirements memReqs = VkMemoryRequirements.callocStack(stack);
+         vkGetBufferMemoryRequirements(device.logical, buf.ptr, memReqs);
+         
          VkMemoryAllocateInfo allocInfo = VkMemoryAllocateInfo.callocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
                  .allocationSize(size)
-                 .memoryTypeIndex(findMemoryType(properties));
+                 .memoryTypeIndex(getMemoryType(memReqs.memoryTypeBits(), properties));
 
          LongBuffer bufferMemory = stack.mallocLong(1);
          vkAssert(vkAllocateMemory(device.logical, allocInfo, null, bufferMemory));
          ptr = bufferMemory.get(0);
       }
    }
-   
-   public int findMemoryType(int properties) {
-      VkPhysicalDeviceMemoryProperties memProperties = device.memoryProperties;
-      
-      for (int i = 0; i < memProperties.memoryTypeCount(); i++) {
-         if ((memProperties.memoryTypes(i).propertyFlags() & properties) == properties) {
-            return i;
+
+   public static int getMemoryType(int typeBits, int properties) {
+      int bits = typeBits;
+      for (int i = 0; i < 32; i++) {
+         if ((bits & 1) == 1) {
+            if ((device.memoryProperties.memoryTypes(i).propertyFlags() & properties) == properties) {
+               return i;
+            }
          }
-     }
-     
-      throw new AssertionError("No suitable Memory Heap was found");
+         bits >>= 1;
+      }
+      return -1;
    }
    
+   public void dispose() {
+      vkFreeMemory(device.logical, ptr, null);
+   }
+
 }

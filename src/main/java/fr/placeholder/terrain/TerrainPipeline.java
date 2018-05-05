@@ -49,6 +49,12 @@ import org.lwjgl.vulkan.VkViewport;
 
 public class TerrainPipeline {
    
+   public TerrainPipeline(Terrain t) {
+      terrain = t;
+   }
+   
+   public Terrain terrain;
+   
    public long line;
    public long layout;
 
@@ -69,10 +75,7 @@ public class TerrainPipeline {
                  .module(fragmentShader)
                  .pName(stack.UTF8("main"));
          
-         VkPipelineVertexInputStateCreateInfo vertexInputInfo = VkPipelineVertexInputStateCreateInfo.callocStack(stack)
-                 .sType(VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO)
-                 .pVertexBindingDescriptions(null)
-                 .pVertexAttributeDescriptions(null);
+         VkPipelineVertexInputStateCreateInfo vertexInputInfo = terrain.data.getVertexState();
          
          VkPipelineInputAssemblyStateCreateInfo inputAssembly = VkPipelineInputAssemblyStateCreateInfo.callocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO)

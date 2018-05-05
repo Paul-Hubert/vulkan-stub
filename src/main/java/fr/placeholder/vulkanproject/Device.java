@@ -20,7 +20,7 @@ import static org.lwjgl.vulkan.KHRSurface.vkGetPhysicalDeviceSurfaceSupportKHR;
 
 public class Device {
 
-   public static Device getPhysicalDevices() {
+   public static Device getDevice() {
       IntBuffer pnum = memAllocInt(1);
       
       vkAssert(vkEnumeratePhysicalDevices(instance.vulkan, pnum, null));
@@ -221,13 +221,13 @@ public class Device {
       return score;
    }
    
-   VkQueueFamilyProperties.Buffer pqueueProperties;
-   VkExtensionProperties.Buffer pextensionProperties;
-   VkSurfaceCapabilitiesKHR surfaceCapabilities;
-   VkSurfaceFormatKHR.Buffer psurfaceFormat;
-   IntBuffer psurfacePresentModes;
-   VkPhysicalDeviceMemoryProperties memoryProperties;
-   VkPhysicalDeviceProperties properties;
+   public VkQueueFamilyProperties.Buffer pqueueProperties;
+   public VkExtensionProperties.Buffer pextensionProperties;
+   public VkSurfaceCapabilitiesKHR surfaceCapabilities;
+   public VkSurfaceFormatKHR.Buffer psurfaceFormat;
+   public IntBuffer psurfacePresentModes;
+   public VkPhysicalDeviceMemoryProperties memoryProperties;
+   public VkPhysicalDeviceProperties properties;
    
    private void getProperties() {
       IntBuffer pnum = memAllocInt(1);

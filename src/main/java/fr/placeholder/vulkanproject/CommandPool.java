@@ -20,9 +20,9 @@ import org.lwjgl.vulkan.VkCommandPoolCreateInfo;
 public class CommandPool {
 
    public final long ptr;
-
-   public static CommandPool createCommandPool() {
-      CommandPool pool = new CommandPool(device.graphicsI);
+   
+   public static CommandPool createCommandPool(int graphicsI) {
+      CommandPool pool = new CommandPool(graphicsI);
       return pool;
    }
 

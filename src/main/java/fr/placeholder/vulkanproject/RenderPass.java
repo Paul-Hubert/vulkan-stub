@@ -8,12 +8,12 @@ import static fr.placeholder.vulkanproject.SwapChain.NUM_FRAMES;
 import static fr.placeholder.vulkanproject.Utils.vkAssert;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
+import java.util.Arrays;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.system.MemoryUtil.memAllocInt;
-import static org.lwjgl.system.MemoryUtil.memAllocLong;
 import static org.lwjgl.system.MemoryUtil.memAllocPointer;
 import static org.lwjgl.system.MemoryUtil.memFree;
 import static org.lwjgl.vulkan.KHRSwapchain.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
@@ -28,12 +28,11 @@ import org.lwjgl.vulkan.VkFramebufferCreateInfo;
 import org.lwjgl.vulkan.VkRect2D;
 import org.lwjgl.vulkan.VkRenderPassBeginInfo;
 import org.lwjgl.vulkan.VkRenderPassCreateInfo;
-import org.lwjgl.vulkan.VkSemaphoreCreateInfo;
 import org.lwjgl.vulkan.VkSubmitInfo;
 import org.lwjgl.vulkan.VkSubpassDependency;
 import org.lwjgl.vulkan.VkSubpassDescription;
 
-public class RenderPass {
+public class RenderPass extends Orchestrated {
    
    public RenderPass() {
       
@@ -126,17 +125,6 @@ public class RenderPass {
       // Record RenderCommandBuffers
 
       try (MemoryStack stack = stackPush()) {
-         // Create semaphores
-         renderCompleteSemaphores = new long[NUM_FRAMES];
-         VkSemaphoreCreateInfo semaphoreCreateInfo = VkSemaphoreCreateInfo.callocStack(stack)
-                 .sType(VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO)
-                 .pNext(NULL)
-                 .flags(0);
-         LongBuffer psemaphore = stack.mallocLong(1);
-         for(int i = 0; i<NUM_FRAMES; i++) {
-            vkAssert(vkCreateSemaphore(device.logical, semaphoreCreateInfo, null, psemaphore));
-            renderCompleteSemaphores[i] = psemaphore.get(0);
-         }
          
          // Create the command buffer begin structure
          VkCommandBufferBeginInfo cmdBufInfo = VkCommandBufferBeginInfo.callocStack(stack)
@@ -184,12 +172,13 @@ public class RenderPass {
       
       pCommandBuffers = memAllocPointer(1);
       // Info struct to submit a command buffer which will wait on the semaphore
-      IntBuffer pWaitDstStageMask = memAllocInt(1);
+      IntBuffer pWaitDstStageMask = memAllocInt(2);
+      pWaitDstStageMask.put(1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
       pWaitDstStageMask.put(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
       submitInfo = VkSubmitInfo.calloc()
               .sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
-              .pNext(NULL)
-              .waitSemaphoreCount(1)
+              .pWaitSemaphores(waitSemaphores)
+              .pSignalSemaphores(signalSemaphores)
               .pWaitDstStageMask(pWaitDstStageMask)
               .pCommandBuffers(pCommandBuffers);
               
@@ -197,19 +186,16 @@ public class RenderPass {
    
    public long pass;
    public VkCommandBuffer[] renderCommandBuffers;
-   public long[] framebuffers, renderCompleteSemaphores;
+   public long[] framebuffers;
    
    public PointerBuffer pCommandBuffers;
    public VkSubmitInfo submitInfo;
    
-   public void render(int i, LongBuffer pImageSemaphores, LongBuffer pRenderSemaphores) {
+   public void render(int i) {
       pCommandBuffers.put(0, renderCommandBuffers[i]);
-      submitInfo.pWaitSemaphores(pImageSemaphores);
-      pRenderSemaphores.put(0,renderCompleteSemaphores[i]);
-      submitInfo.pSignalSemaphores(pRenderSemaphores);
-      
-      vkAssert(vkQueueSubmit(device.graphics, submitInfo, NULL));
-      
+      submitInfo.waitSemaphoreCount(waitSemaphores.remaining());
+      System.out.println(waitSemaphores.get(0));
+      vkAssert(vkQueueSubmit(device.graphics, submitInfo, VK_NULL_HANDLE));
    }
    
    
@@ -218,9 +204,6 @@ public class RenderPass {
       submitInfo.free();
       vkFreeCommandBuffers(device.logical, pool.ptr, pCommandBuffers);
       memFree(pCommandBuffers);
-      for(int i = 0; i<NUM_FRAMES; i++) {
-         vkDestroySemaphore(device.logical, renderCompleteSemaphores[i], null);
-      }
       vkDestroyFramebuffer(device.logical, framebuffers[0], null);
       vkDestroyFramebuffer(device.logical, framebuffers[1], null);
       vkDestroyRenderPass(device.logical, pass, null);

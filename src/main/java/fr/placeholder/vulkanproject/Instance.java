@@ -38,7 +38,7 @@ public class Instance {
    
    private void init() {
       try (MemoryStack stack = stackPush()) {
-         VkApplicationInfo appInfo = VkApplicationInfo.mallocStack(stack)
+         VkApplicationInfo appInfo = VkApplicationInfo.callocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)
                  .pApplicationName(stack.UTF8("Java Vulkan"))
                  .pEngineName(stack.UTF8("Vulkanite"))
@@ -61,7 +61,7 @@ public class Instance {
          }
          ppEnabledLayerNames.flip();
 
-         VkInstanceCreateInfo pCreateInfo = VkInstanceCreateInfo.mallocStack(stack)
+         VkInstanceCreateInfo pCreateInfo = VkInstanceCreateInfo.callocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO)
                  .pNext(NULL)
                  .pApplicationInfo(appInfo)
@@ -77,7 +77,7 @@ public class Instance {
 
    public void setupDebugging(int flags, VkDebugReportCallbackEXT callback) {
       try (MemoryStack stack = stackPush()) {
-         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = VkDebugReportCallbackCreateInfoEXT.mallocStack(stack)
+         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = VkDebugReportCallbackCreateInfoEXT.callocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT)
                  .pNext(NULL)
                  .pfnCallback(callback)

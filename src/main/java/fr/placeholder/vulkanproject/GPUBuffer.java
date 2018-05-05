@@ -7,15 +7,15 @@ import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.vulkan.VK10.VK_SHARING_MODE_EXCLUSIVE;
 import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-import static org.lwjgl.vulkan.VK10.vkBindBufferMemory;
 import static org.lwjgl.vulkan.VK10.vkCreateBuffer;
+import static org.lwjgl.vulkan.VK10.vkDestroyBuffer;
 import org.lwjgl.vulkan.VkBufferCreateInfo;
 
 public class GPUBuffer {
    
    public long ptr;
    
-   public GPUBuffer(long size, long offset, int usage, Memory mem) {
+   public GPUBuffer(long size, int usage) {
       try(MemoryStack stack = stackPush()) {
          VkBufferCreateInfo bufferInfo = VkBufferCreateInfo.callocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
@@ -26,8 +26,10 @@ public class GPUBuffer {
          LongBuffer pbuffer = stack.mallocLong(1);
          vkAssert(vkCreateBuffer(device.logical, bufferInfo, null, pbuffer));
          ptr = pbuffer.get(0);
-         
-         vkBindBufferMemory(device.logical, ptr, mem.ptr, 0);
       }
+   }
+   
+   public void dispose() {
+      vkDestroyBuffer(device.logical, ptr, null);
    }
 }

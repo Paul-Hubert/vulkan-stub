@@ -1,9 +1,10 @@
 package fr.placeholder.vulkanproject;
 
 import static fr.placeholder.vulkanproject.CommandPool.createCommandPool;
-import static fr.placeholder.vulkanproject.Device.getPhysicalDevices;
+import static fr.placeholder.vulkanproject.Device.getDevice;
 import static fr.placeholder.vulkanproject.Instance.createInstance;
 import static fr.placeholder.vulkanproject.SwapChain.createSwapChain;
+import static fr.placeholder.vulkanproject.Transfer.createTransfer;
 import static fr.placeholder.vulkanproject.Windu.createWindu;
 import static fr.placeholder.vulkanproject.Windu.initGLFWContext;
 import org.lwjgl.vulkan.*;
@@ -17,6 +18,7 @@ public class Context {
    public static Device device;
    public static SwapChain swap;
    public static CommandPool pool;
+   public static Transfer transfer;
    
    public static void init() {
       initGLFWContext();
@@ -33,17 +35,18 @@ public class Context {
       
       win = createWindu();
       
-      device = getPhysicalDevices();
+      device = getDevice();
       
-      pool = createCommandPool();
+      pool = createCommandPool(device.graphicsI);
       
       swap = createSwapChain();
       
-      win.show();
+      transfer = createTransfer();
       
    }
 
    protected static void dispose() {
+      transfer.dispose();
       swap.dispose();
       pool.dispose();
       device.dispose();
