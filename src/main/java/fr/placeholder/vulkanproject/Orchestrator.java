@@ -26,62 +26,55 @@ public class Orchestrator {
                  .sType(VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO)
                  .pNext(VK_NULL_HANDLE)
                  .flags(0);
-         LongBuffer psemaphores = stack.mallocLong(NUM_FRAMES * semaphoreCount);
+         LongBuffer psemaphores = stack.mallocLong(1);
+	 for(int i = 0; i<SEM_COUNT; i++) {
+	    vkAssert(vkCreateSemaphore(device.logical, semaphoreCreateInfo, null, psemaphores));
+	    sem[i][0] = psemaphores.get(0);
+	    vkAssert(vkCreateSemaphore(device.logical, semaphoreCreateInfo, null, psemaphores));
+	    sem[i][1] = psemaphores.get(0);
+	 }
          
-         vkAssert(vkCreateSemaphore(device.logical, semaphoreCreateInfo, null, psemaphores));
-         for(int i = 0; i<NUM_FRAMES; i++) {
-            imageAcquired[i] = psemaphores.get(i+NUM_FRAMES*0);
-            renderComplete[i] = psemaphores.get(i+NUM_FRAMES*1);
-            renderComplete[i+NUM_FRAMES] = psemaphores.get(i+NUM_FRAMES*2);
-            transferComplete[i] = psemaphores.get(i+NUM_FRAMES*3);
-         }
-         
-         terrain.init(0, 0);
-         render.init(2,2);
-         renderer.init(1,1);
-         transfer.init(1,1);
       }
    }
    
-   public static int index;
-   private static int sem = 0, frame = 0;
+   public static int img;
+   private static int index = 0, frame = 0;
    
-   private static int semaphoreCount = 4;
-   private static final long[] imageAcquired = new long[NUM_FRAMES],
-           renderComplete = new long[NUM_FRAMES * 2],
-           transferComplete = new long[NUM_FRAMES];
+   private static final int SEM_COUNT = 4;
+   private static final int acquire_render = 0, render_present = 1, render_transfer = 2, transfer_render = 3;
+   private static final long[][] sem = new long[SEM_COUNT][NUM_FRAMES];
            
    
    public static void run() {
       while (!glfwWindowShouldClose(win.window)) {
          
          glfwPollEvents();
-         renderer.signalSemaphores.put(0, imageAcquired[sem]);
+         renderer.signalTo(sem[acquire_render][index]);
+         terrain.update();
+	 index = renderer.acquire();  // Concurrent
          
-         terrain.update(); index = renderer.acquire();  // Concurrent
          
-         
-         render.waitOn(imageAcquired[sem])
-               .signalTo(renderComplete[sem]).signalTo(1, renderComplete[sem + NUM_FRAMES]);
-         loop(render, 1, transferComplete);
+         render.waitOn(sem[acquire_render][index])
+               .signalTo(1, sem[render_present][index]).signalTo(0, sem[render_transfer][index]);
+         loop(render, 1, transfer_render);
+	 
          render.render(index);
          
-         renderer.waitOn(renderComplete[sem]);
-         transfer.waitOn(renderComplete[sem + NUM_FRAMES]).signalTo(transferComplete[sem]);
-         renderer.present();transfer.flush(); // Concurrent
+         renderer.waitOn(sem[render_present][index]);
+         transfer.waitOn(sem[render_transfer][index]).signalTo(sem[transfer_render][index]);
+         renderer.present();
+	 transfer.flush(); // Concurrent
          
-         sem = (sem + 1)%NUM_FRAMES;
+         index = (index + 1)%NUM_FRAMES;
          frame++;
       }
    }
    
-   private static void loop(Orchestrated orc, int place, long[] sems) {
-      if(frame == 0) {
-         orc.waitSemaphores.limit(place);
-         return;
+   private static void loop(Orchestrated orc, int place, int i) {
+      if(frame > 0) {
+	 orc.waitSemaphores.clear();
+	 orc.waitOn(place, sem[i][(index-1+NUM_FRAMES)%NUM_FRAMES]);
       }
-      orc.waitSemaphores.clear();
-      orc.waitOn(place, sems[(index-1+NUM_FRAMES)%NUM_FRAMES]);
    }
    
    

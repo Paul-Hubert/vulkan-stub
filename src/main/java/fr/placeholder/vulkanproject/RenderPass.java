@@ -1,14 +1,13 @@
 package fr.placeholder.vulkanproject;
 
+import static fr.placeholder.vulkanproject.CommandPool.createCommandPool;
 import static fr.placeholder.vulkanproject.Context.device;
-import static fr.placeholder.vulkanproject.Context.pool;
 import static fr.placeholder.vulkanproject.Context.swap;
 import static fr.placeholder.vulkanproject.Main.terrain;
 import static fr.placeholder.vulkanproject.SwapChain.NUM_FRAMES;
 import static fr.placeholder.vulkanproject.Utils.vkAssert;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
-import java.util.Arrays;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
@@ -105,6 +104,8 @@ public class RenderPass extends Orchestrated {
       
       // Create CommandBuffers
       
+      pool = createCommandPool(device.graphicsI);
+      
       try (MemoryStack stack = stackPush()) {
          // Create the render command buffers (one command buffer per framebuffer image)
          VkCommandBufferAllocateInfo cmdBufAllocateInfo = VkCommandBufferAllocateInfo.callocStack(stack)
@@ -168,37 +169,50 @@ public class RenderPass extends Orchestrated {
          }
       }
       
-      
+   }
+   
+   @Override
+   public void init() {
+      super.init();
       
       pCommandBuffers = memAllocPointer(1);
       // Info struct to submit a command buffer which will wait on the semaphore
-      IntBuffer pWaitDstStageMask = memAllocInt(2);
-      pWaitDstStageMask.put(1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-      pWaitDstStageMask.put(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+      waitDstStageMask = memAllocInt(3);
+      waitDstStageMask.put(1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+      waitDstStageMask.put(0, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
       submitInfo = VkSubmitInfo.calloc()
               .sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
               .pWaitSemaphores(waitSemaphores)
               .pSignalSemaphores(signalSemaphores)
-              .pWaitDstStageMask(pWaitDstStageMask)
+              .pWaitDstStageMask(waitDstStageMask)
               .pCommandBuffers(pCommandBuffers);
-              
+      
    }
    
    public long pass;
+   public CommandPool pool;
    public VkCommandBuffer[] renderCommandBuffers;
    public long[] framebuffers;
    
    public PointerBuffer pCommandBuffers;
    public VkSubmitInfo submitInfo;
+   public IntBuffer waitDstStageMask;
    
    public void render(int i) {
       pCommandBuffers.put(0, renderCommandBuffers[i]);
-      submitInfo.waitSemaphoreCount(waitSemaphores.remaining());
-      System.out.println(waitSemaphores.get(0));
+      waitDstStageMask.limit(waitSemaphores.remaining());
+      System.out.println(waitSemaphores.remaining());
+      submitInfo.waitSemaphoreCount(waitSemaphores.remaining())
+	      .pSignalSemaphores(signalSemaphores)
+	      .pWaitSemaphores(waitSemaphores)
+              .pSignalSemaphores(signalSemaphores)
+              .pWaitDstStageMask(waitDstStageMask)
+              .pCommandBuffers(pCommandBuffers);
       vkAssert(vkQueueSubmit(device.graphics, submitInfo, VK_NULL_HANDLE));
    }
    
    
+   @Override
    public void dispose() {
       memFree(submitInfo.pWaitDstStageMask());
       submitInfo.free();

@@ -1,7 +1,6 @@
 package fr.placeholder.terrain;
 
 import static fr.placeholder.vulkanproject.Context.device;
-import static fr.placeholder.vulkanproject.Context.pool;
 import static fr.placeholder.vulkanproject.Context.transfer;
 import fr.placeholder.vulkanproject.GPUBuffer;
 import fr.placeholder.vulkanproject.Memory;
@@ -15,7 +14,6 @@ import static org.lwjgl.system.MemoryStack.stackPush;
 import org.lwjgl.system.MemoryUtil;
 import static org.lwjgl.system.MemoryUtil.memAddress;
 import static org.lwjgl.system.MemoryUtil.memAllocLong;
-import static org.lwjgl.system.MemoryUtil.memAllocPointer;
 import static org.lwjgl.system.MemoryUtil.memFree;
 import org.lwjgl.vulkan.VK10;
 import static org.lwjgl.vulkan.VK10.VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -52,10 +50,10 @@ public class TerrainData {
    public void init() {
       vertexBuffers = memAllocLong(1);
       vertexOffsets = memAllocLong(1);
-
+      
       try (MemoryStack stack = stackPush()) {
          int vertexSize = 3 * 2 * 4;
-         int totalSize = vertexSize;
+         int totalSize = 512;
 
          ByteBuffer vertex = stack.malloc(vertexSize);
          FloatBuffer fb = vertex.asFloatBuffer();
@@ -65,9 +63,9 @@ public class TerrainData {
          fb.put(0.5f).put(-0.5f);
          fb.put(0.0f).put(0.5f);
 
-         stagingBuffer = new GPUBuffer(vertexSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+         stagingBuffer = new GPUBuffer(totalSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
-         stagingMemory = new Memory(vertexSize, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer);
+         stagingMemory = new Memory(totalSize, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer);
 
          vertexBuffer = new GPUBuffer(totalSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
          vertexBuffers.put(0, vertexBuffer.ptr);
@@ -75,21 +73,12 @@ public class TerrainData {
 
          vertexMemory = new Memory(totalSize, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer);
 
-         // Write to staging buffer 
-         PointerBuffer pData = stack.mallocPointer(1);
-         vkAssert(vkMapMemory(device.logical, stagingMemory.ptr, 0, stagingMemory.size, 0, pData));
-         long data = pData.get(0);
-
-         MemoryUtil.memCopy(memAddress(vertex), data, vertex.remaining());
-         vkUnmapMemory(device.logical, stagingMemory.ptr);
-
          vkAssert(vkBindBufferMemory(device.logical, vertexBuffer.ptr, vertexMemory.ptr, vertexOffsets.get(0)));
          vkAssert(vkBindBufferMemory(device.logical, stagingBuffer.ptr, stagingMemory.ptr, 0));
 
-         copyCommand = pool.createCommandBuffer();
-         pcommands = memAllocPointer(1);
-         pcommands.put(0,copyCommand);
+         copyCommand = transfer.createCommandBuffer();
          
+	 updateBuffer(vertex, vertexSize, 0, 0);
       }
    }
 
@@ -98,9 +87,8 @@ public class TerrainData {
    LongBuffer vertexBuffers, vertexOffsets;
    GPUBuffer vertexBuffer, stagingBuffer;
    Memory vertexMemory, stagingMemory;
-
+   
    VkCommandBuffer copyCommand;
-   PointerBuffer pcommands;
    
    
 
@@ -130,7 +118,7 @@ public class TerrainData {
       return vi;
    }
 
-   public void updateBuffer(ByteBuffer vertex, long size, long offset, VkBufferCopy.Buffer copyRegions) {
+   public void updateBuffer(ByteBuffer vertex, long size, long srcoffset, long dstoffset) {
       try (MemoryStack stack = stackPush()) {
          // Write to staging buffer 
          PointerBuffer pData = stack.mallocPointer(1);
@@ -140,14 +128,17 @@ public class TerrainData {
          MemoryUtil.memCopy(memAddress(vertex), data, size);
 
          vkUnmapMemory(device.logical, stagingMemory.ptr);
+	 
+	 VkBufferCopy.Buffer region = VkBufferCopy.callocStack(1,stack);
+	 region.get(0).set(srcoffset, dstoffset, size);
          
          VkCommandBufferBeginInfo beginInfo = VkCommandBufferBeginInfo.callocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO)
                  .flags(VK10.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-
+	 
          vkBeginCommandBuffer(copyCommand, beginInfo);
          
-         vkCmdCopyBuffer(copyCommand, stagingBuffer.ptr, vertexBuffer.ptr, copyRegions);
+         vkCmdCopyBuffer(copyCommand, stagingBuffer.ptr, vertexBuffer.ptr, region);
          
          vkAssert(vkEndCommandBuffer(copyCommand));
          
@@ -163,7 +154,6 @@ public class TerrainData {
       stagingMemory.dispose();
       memFree(vertexBuffers);
       memFree(vertexOffsets);
-      memFree(pcommands);
    }
 
 }

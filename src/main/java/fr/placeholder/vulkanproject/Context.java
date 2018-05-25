@@ -17,7 +17,6 @@ public class Context {
    public static Windu win;
    public static Device device;
    public static SwapChain swap;
-   public static CommandPool pool;
    public static Transfer transfer;
    
    public static void init() {
@@ -37,8 +36,6 @@ public class Context {
       
       device = getDevice();
       
-      pool = createCommandPool(device.graphicsI);
-      
       swap = createSwapChain();
       
       transfer = createTransfer();
@@ -48,7 +45,6 @@ public class Context {
    protected static void dispose() {
       transfer.dispose();
       swap.dispose();
-      pool.dispose();
       device.dispose();
       win.dispose();
       instance.dispose();

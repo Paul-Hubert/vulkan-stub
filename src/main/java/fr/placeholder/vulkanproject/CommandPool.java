@@ -8,7 +8,6 @@ import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import org.lwjgl.vulkan.VK10;
 import static org.lwjgl.vulkan.VK10.VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-import static org.lwjgl.vulkan.VK10.VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 import static org.lwjgl.vulkan.VK10.vkAllocateCommandBuffers;
@@ -28,10 +27,10 @@ public class CommandPool {
 
    private CommandPool(int queueFamilyIndex) {
       try (MemoryStack stack = stackPush()) {
-         VkCommandPoolCreateInfo cmdPoolInfo = VkCommandPoolCreateInfo.calloc()
+         VkCommandPoolCreateInfo cmdPoolInfo = VkCommandPoolCreateInfo.callocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO)
                  .queueFamilyIndex(queueFamilyIndex)
-                 .flags(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+                 .flags(0);
          LongBuffer pCmdPool = stack.mallocLong(1);
          vkAssert(vkCreateCommandPool(device.logical, cmdPoolInfo, null, pCmdPool));
          ptr = pCmdPool.get(0);

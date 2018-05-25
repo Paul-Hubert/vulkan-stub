@@ -49,13 +49,6 @@ public class Device {
       if (index < 0) {
          throw new AssertionError("No suitable devices were found");
       }
-
-      //Dispose all other devices that aren't used
-      for (int i = 0; i < numDevices; ++i) {
-         if (i != index) {
-            devices[i].dispose();
-         }
-      }
       
       devices[index].select();
       
@@ -173,14 +166,14 @@ public class Device {
          logical = new VkDevice(pDevice.get(0), physical, info);
          
          // Now get the queues from the device we just created.
-         PointerBuffer pQueue = stack.mallocPointer(3);
+         PointerBuffer pQueue = stack.mallocPointer(1);
          
          vkGetDeviceQueue(logical, graphicsI, graphicsJ,  pQueue);
-         graphics = new VkQueue(pQueue.get(), logical);
+         graphics = new VkQueue(pQueue.get(0), logical);
          vkGetDeviceQueue(logical, computeI, computeJ,  pQueue);
-         compute = new VkQueue(pQueue.get(), logical);
+         compute = new VkQueue(pQueue.get(0), logical);
          vkGetDeviceQueue(logical, transferI, transferJ,  pQueue);
-         transfer = new VkQueue(pQueue.get(), logical);
+         transfer = new VkQueue(pQueue.get(0), logical);
          
       }
    }

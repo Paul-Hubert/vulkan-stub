@@ -7,6 +7,7 @@ import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
+import org.lwjgl.system.MemoryUtil;
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.system.MemoryUtil.memAllocInt;
 import static org.lwjgl.system.MemoryUtil.memFree;
@@ -17,28 +18,30 @@ import org.lwjgl.vulkan.VkPresentInfoKHR;
 
 public class Renderer extends Orchestrated {
    
+   @Override
    public void init() {
-      try(MemoryStack stack = stackPush()) {
-         current = 0;
-         pImageIndex = memAllocInt(1);
-         LongBuffer pSwapchains = stack.mallocLong(1);
+      super.init();
+      
+      current = 0;
+      pImageIndex = memAllocInt(1);
+      LongBuffer pSwapchains = MemoryUtil.memAllocLong(1);
 
-         pSwapchains.put(0, swap.chain);
-         // Info struct to present the current swapchain image to the display
-         presentInfo = VkPresentInfoKHR.calloc()
-                 .sType(VK_STRUCTURE_TYPE_PRESENT_INFO_KHR)
-                 .pNext(NULL)
-                 .pWaitSemaphores(waitSemaphores)
-                 .swapchainCount(1)
-                 .pSwapchains(pSwapchains)
-                 .pImageIndices(pImageIndex)
-                 .pResults(null);
+      pSwapchains.put(0, swap.chain);
+      // Info struct to present the current swapchain image to the display
+      presentInfo = VkPresentInfoKHR.calloc()
+	      .sType(VK_STRUCTURE_TYPE_PRESENT_INFO_KHR)
+	      .pNext(NULL)
+	      .pWaitSemaphores(waitSemaphores)
+	      .swapchainCount(1)
+	      .pSwapchains(pSwapchains)
+	      .pImageIndices(pImageIndex)
+	      .pResults(null);
 
-         // The render loop
-         sum = 0;
-         count = 0;
-         last = System.currentTimeMillis();
-      }
+      // The render loop
+      sum = 0;
+      count = 0;
+      last = System.currentTimeMillis();
+      
    }
    
    private int current = 0, count;
@@ -67,8 +70,10 @@ public class Renderer extends Orchestrated {
       last = System.currentTimeMillis();
    }
    
+   @Override
    public void dispose() {
       memFree(pImageIndex);
+      memFree(presentInfo.pSwapchains());
       presentInfo.free();
    }
    

@@ -1,7 +1,6 @@
 package fr.placeholder.terrain;
 
 import fr.placeholder.vulkanproject.Orchestrated;
-import java.nio.LongBuffer;
 import static org.lwjgl.vulkan.VK10.VK_PIPELINE_BIND_POINT_GRAPHICS;
 import static org.lwjgl.vulkan.VK10.vkCmdBindPipeline;
 import static org.lwjgl.vulkan.VK10.vkCmdBindVertexBuffers;
@@ -10,6 +9,7 @@ import org.lwjgl.vulkan.VkCommandBuffer;
 
 public class Terrain extends Orchestrated {
 
+   @Override
    public void init() {
       pipe = new TerrainPipeline(this);
       data = new TerrainData(this);
@@ -28,8 +28,6 @@ public class Terrain extends Orchestrated {
       vkCmdBindVertexBuffers(commandBuffer, 0, data.vertexBuffers, data.vertexOffsets);
       vkCmdDraw(commandBuffer, 3, 1, 0, 0);
    }
-
-   public LongBuffer waitSemaphores, signalSemaphores;
    
    public void update() {
       
@@ -37,6 +35,7 @@ public class Terrain extends Orchestrated {
       
    }
 
+   @Override
    public void dispose() {
       pipe.dispose();
       data.dispose();

@@ -2,14 +2,17 @@ package fr.placeholder.vulkanproject;
 
 import static fr.placeholder.vulkanproject.Context.device;
 import static fr.placeholder.vulkanproject.Utils.vkAssert;
+import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
+import org.lwjgl.system.MemoryUtil;
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.system.MemoryUtil.memAllocLong;
 import static org.lwjgl.system.MemoryUtil.memAllocPointer;
 import static org.lwjgl.system.MemoryUtil.memFree;
+import org.lwjgl.vulkan.VK10;
 import static org.lwjgl.vulkan.VK10.VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 import static org.lwjgl.vulkan.VK10.VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -32,10 +35,13 @@ public class Transfer extends Orchestrated {
       return transfer;
    }
    
+   @Override
    public void init() {
+      super.init();
       
       pCommands = memAllocPointer(3);
-      signalSemaphores = memAllocLong(1);
+      waitDstStageMask = MemoryUtil.memAllocInt(waitSemaphores.capacity());
+      waitDstStageMask.put(0, VK10.VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
       
       createCommandPool();
       
@@ -43,7 +49,8 @@ public class Transfer extends Orchestrated {
               .sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
               .pNext(NULL)
               .pCommandBuffers(pCommands)
-              .pSignalSemaphores(waitSemaphores)
+              .pWaitSemaphores(waitSemaphores)
+	      .pWaitDstStageMask(waitDstStageMask)
               .pSignalSemaphores(signalSemaphores);
       
    }
@@ -63,18 +70,24 @@ public class Transfer extends Orchestrated {
    }
    
    private VkSubmitInfo submit;
+   private IntBuffer waitDstStageMask;
    
    private PointerBuffer pCommands;
    private int commandCount = 0;
    
    public void flush() {
       pCommands.limit(commandCount);
-      submit.pCommandBuffers(pCommands);
-      submit.waitSemaphoreCount(waitSemaphores.remaining());
+      waitDstStageMask.limit(waitSemaphores.remaining());
+      submit.waitSemaphoreCount(waitSemaphores.remaining())
+	      .pCommandBuffers(pCommands)
+              .pWaitSemaphores(waitSemaphores)
+	      .pWaitDstStageMask(waitDstStageMask)
+              .pSignalSemaphores(signalSemaphores);
       vkAssert(vkQueueSubmit(device.transfer, submit, NULL));
       commandCount = 0;
    }
    
+   @Override
    public void dispose() {
       submit.free();
       memFree(pCommands);
