@@ -7,6 +7,7 @@ import org.lwjgl.glfw.GLFWKeyCallback;
 import static org.lwjgl.glfw.GLFWVulkan.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static fr.placeholder.vulkanproject.Utils.*;
+import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import org.lwjgl.glfw.GLFWWindowSizeCallback;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
@@ -49,6 +50,7 @@ public final class Windu {
             }
          }
       });
+      
       try(MemoryStack stack = stackPush()) {
          LongBuffer pSurface = stack.mallocLong(1);
          vkAssert(glfwCreateWindowSurface(instance.vulkan, window, null, pSurface));
@@ -80,6 +82,7 @@ public final class Windu {
    }
    
    public void dispose() {
+      glfwFreeCallbacks(window);
       glfwDestroyWindow(window);
       glfwTerminate();
    }

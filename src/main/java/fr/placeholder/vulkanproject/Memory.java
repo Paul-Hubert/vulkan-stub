@@ -14,14 +14,14 @@ import org.lwjgl.vulkan.VkMemoryRequirements;
 
 public class Memory {
 
-   public long ptr;
-   public long size;
+   private final long ptr;
+   private final long size;
 
-   public Memory(long size, int properties, GPUBuffer buf) {
+   public Memory(long size, int properties, VkiBuffer buf) {
       try (MemoryStack stack = stackPush()) {
          this.size = size;
          VkMemoryRequirements memReqs = VkMemoryRequirements.callocStack(stack);
-         vkGetBufferMemoryRequirements(device.logical, buf.ptr, memReqs);
+         vkGetBufferMemoryRequirements(device.logical, buf.get(), memReqs);
          
          VkMemoryAllocateInfo allocInfo = VkMemoryAllocateInfo.callocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
@@ -45,6 +45,14 @@ public class Memory {
          bits >>= 1;
       }
       return -1;
+   }
+   
+   public long get() {
+      return ptr;
+   }
+   
+   public long size() {
+      return size;
    }
    
    public void dispose() {

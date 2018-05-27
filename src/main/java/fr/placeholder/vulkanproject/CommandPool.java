@@ -19,18 +19,13 @@ import org.lwjgl.vulkan.VkCommandPoolCreateInfo;
 public class CommandPool {
 
    public final long ptr;
-   
-   public static CommandPool createCommandPool(int graphicsI) {
-      CommandPool pool = new CommandPool(graphicsI);
-      return pool;
-   }
 
-   private CommandPool(int queueFamilyIndex) {
+   public CommandPool(int queueFamilyIndex, int flags) {
       try (MemoryStack stack = stackPush()) {
          VkCommandPoolCreateInfo cmdPoolInfo = VkCommandPoolCreateInfo.callocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO)
                  .queueFamilyIndex(queueFamilyIndex)
-                 .flags(0);
+                 .flags(flags);
          LongBuffer pCmdPool = stack.mallocLong(1);
          vkAssert(vkCreateCommandPool(device.logical, cmdPoolInfo, null, pCmdPool));
          ptr = pCmdPool.get(0);

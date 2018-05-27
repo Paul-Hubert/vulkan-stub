@@ -1,6 +1,5 @@
 package fr.placeholder.vulkanproject;
 
-import static fr.placeholder.vulkanproject.CommandPool.createCommandPool;
 import static fr.placeholder.vulkanproject.Device.getDevice;
 import static fr.placeholder.vulkanproject.Instance.createInstance;
 import static fr.placeholder.vulkanproject.SwapChain.createSwapChain;
@@ -32,6 +31,8 @@ public class Context {
          }
       });
       
+      Synchronization.init();
+      
       win = createWindu();
       
       device = getDevice();
@@ -45,6 +46,7 @@ public class Context {
    protected static void dispose() {
       transfer.dispose();
       swap.dispose();
+      Synchronization.dispose();
       device.dispose();
       win.dispose();
       instance.dispose();

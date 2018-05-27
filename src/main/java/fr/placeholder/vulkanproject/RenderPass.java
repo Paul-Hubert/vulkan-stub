@@ -1,6 +1,5 @@
 package fr.placeholder.vulkanproject;
 
-import static fr.placeholder.vulkanproject.CommandPool.createCommandPool;
 import static fr.placeholder.vulkanproject.Context.device;
 import static fr.placeholder.vulkanproject.Context.swap;
 import static fr.placeholder.vulkanproject.Main.terrain;
@@ -21,7 +20,6 @@ import org.lwjgl.vulkan.VkAttachmentDescription;
 import org.lwjgl.vulkan.VkAttachmentReference;
 import org.lwjgl.vulkan.VkClearValue;
 import org.lwjgl.vulkan.VkCommandBuffer;
-import org.lwjgl.vulkan.VkCommandBufferAllocateInfo;
 import org.lwjgl.vulkan.VkCommandBufferBeginInfo;
 import org.lwjgl.vulkan.VkFramebufferCreateInfo;
 import org.lwjgl.vulkan.VkRect2D;
@@ -104,22 +102,12 @@ public class RenderPass extends Orchestrated {
       
       // Create CommandBuffers
       
-      pool = createCommandPool(device.graphicsI);
+      pool = new CommandPool(device.graphicsI, 0);
       
-      try (MemoryStack stack = stackPush()) {
-         // Create the render command buffers (one command buffer per framebuffer image)
-         VkCommandBufferAllocateInfo cmdBufAllocateInfo = VkCommandBufferAllocateInfo.callocStack(stack)
-                 .sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO)
-                 .commandPool(pool.ptr)
-                 .level(VK_COMMAND_BUFFER_LEVEL_PRIMARY)
-                 .commandBufferCount(SwapChain.NUM_FRAMES);
-         PointerBuffer pCommandBuffer = stack.mallocPointer(SwapChain.NUM_FRAMES);
-         vkAssert(vkAllocateCommandBuffers(device.logical, cmdBufAllocateInfo, pCommandBuffer));
-
-         renderCommandBuffers = new VkCommandBuffer[SwapChain.NUM_FRAMES];
-         for (int i = 0; i < SwapChain.NUM_FRAMES; i++) {
-            renderCommandBuffers[i] = new VkCommandBuffer(pCommandBuffer.get(i), device.logical);
-         }
+      // Create the render command buffers (one command buffer per framebuffer image)
+      renderCommandBuffers = new VkCommandBuffer[SwapChain.NUM_FRAMES];
+      for (int i = 0; i < SwapChain.NUM_FRAMES; i++) {
+         renderCommandBuffers[i] = pool.createCommandBuffer();
       }
       
       
@@ -200,10 +188,8 @@ public class RenderPass extends Orchestrated {
    
    public void render(int i) {
       pCommandBuffers.put(0, renderCommandBuffers[i]);
-      waitDstStageMask.limit(waitSemaphores.remaining());
-      System.out.println(waitSemaphores.remaining());
+      waitDstStageMask.limit(waitSemaphores.limit());
       submitInfo.waitSemaphoreCount(waitSemaphores.remaining())
-	      .pSignalSemaphores(signalSemaphores)
 	      .pWaitSemaphores(waitSemaphores)
               .pSignalSemaphores(signalSemaphores)
               .pWaitDstStageMask(waitDstStageMask)
@@ -214,10 +200,14 @@ public class RenderPass extends Orchestrated {
    
    @Override
    public void dispose() {
+      super.dispose();
+      
       memFree(submitInfo.pWaitDstStageMask());
       submitInfo.free();
-      vkFreeCommandBuffers(device.logical, pool.ptr, pCommandBuffers);
+      vkFreeCommandBuffers(device.logical, pool.ptr, renderCommandBuffers[0]);
+      vkFreeCommandBuffers(device.logical, pool.ptr, renderCommandBuffers[1]);
       memFree(pCommandBuffers);
+      pool.dispose();
       vkDestroyFramebuffer(device.logical, framebuffers[0], null);
       vkDestroyFramebuffer(device.logical, framebuffers[1], null);
       vkDestroyRenderPass(device.logical, pass, null);

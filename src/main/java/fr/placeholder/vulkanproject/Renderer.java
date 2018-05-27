@@ -57,6 +57,8 @@ public class Renderer extends Orchestrated {
    }
    
    public void present() {
+      
+      presentInfo.pWaitSemaphores(waitSemaphores);
       // This will display the image
       vkAssert(vkQueuePresentKHR(device.graphics, presentInfo));
 
@@ -72,6 +74,7 @@ public class Renderer extends Orchestrated {
    
    @Override
    public void dispose() {
+      super.dispose();
       memFree(pImageIndex);
       memFree(presentInfo.pSwapchains());
       presentInfo.free();

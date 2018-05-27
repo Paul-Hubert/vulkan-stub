@@ -16,25 +16,21 @@ public abstract class Orchestrated {
       signalSemaphores.limit(maxS);
    }
    
-   public Orchestrated waitOn(long semaphore) {
-      waitOn(0, semaphore);
-      return this;
-   }
-   
-   public Orchestrated signalTo(long semaphore) {
-      signalTo(0, semaphore);
-      return this;
-   }
-   
-   public Orchestrated waitOn(int index, long semaphore) {
+   public Orchestrated waitOn(int index, int semindex) {
       if(index >= maxW) {maxW = index+1; waitSemaphores.limit(maxW);}
-      waitSemaphores.put(index, semaphore);
+      waitSemaphores.put(index, Synchronization.getSemaphore(semindex));
       return this;
    }
    
-   public Orchestrated signalTo(int index, long semaphore) {
+   public Orchestrated waitOnLast(int index, int semindex) {
+      if(index >= maxW) {maxW = index+1; waitSemaphores.limit(maxW);}
+      waitSemaphores.put(index, Synchronization.getLastSemaphore(semindex));
+      return this;
+   }
+   
+   public Orchestrated signalTo(int index, int semindex) {
       if(index >= maxS) {maxS = index+1; signalSemaphores.limit(maxS);}
-      signalSemaphores.put(index, semaphore);
+      signalSemaphores.put(index, Synchronization.getSemaphore(semindex));
       return this;
    }
    

@@ -54,6 +54,7 @@ public class Main {
       vkQueueWaitIdle(device.graphics);
       vkDeviceWaitIdle(device.logical);
       
+      Orchestrator.dispose();
       renderer.dispose();
       render.dispose();
       terrain.dispose();

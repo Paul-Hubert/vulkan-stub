@@ -25,7 +25,8 @@ import org.lwjgl.vulkan.VkInstanceCreateInfo;
 public class Instance {
    
    public VkInstance vulkan;
-   public long debugCallback;
+   private long debugCallback;
+   private VkDebugReportCallbackEXT callback;
    
    public static String[] enabledExtensionNames = {VK_EXT_DEBUG_REPORT_EXTENSION_NAME};
    public static String[] enabledLayerNames = {"VK_LAYER_LUNARG_standard_validation"};
@@ -77,6 +78,7 @@ public class Instance {
 
    public void setupDebugging(int flags, VkDebugReportCallbackEXT callback) {
       try (MemoryStack stack = stackPush()) {
+         this.callback = callback;
          VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = VkDebugReportCallbackCreateInfoEXT.callocStack(stack)
                  .sType(VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT)
                  .pNext(NULL)
@@ -85,12 +87,12 @@ public class Instance {
                  .flags(flags);
          LongBuffer pCallback = stack.mallocLong(1);
          vkAssert(vkCreateDebugReportCallbackEXT(vulkan, dbgCreateInfo, null, pCallback));
-
          debugCallback = pCallback.get(0);
       }
    }
    
    public void dispose() {
+      callback.free();
       vkDestroyDebugReportCallbackEXT(vulkan, debugCallback, null);
       vkDestroyInstance(vulkan, null);
    }

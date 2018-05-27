@@ -109,7 +109,7 @@ public class Device {
          
          int transferJ = -1;
          for(int i = 0; i<qfc; i++) {
-            if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_TRANSFER_BIT) == VK_QUEUE_TRANSFER_BIT) {
+            if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_TRANSFER_BIT) == VK_QUEUE_TRANSFER_BIT || (pqueueProperties.get(i).queueFlags() & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT || (pqueueProperties.get(i).queueFlags() & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT) {
                for(int j = 0; j<indices[i].length; j++) {
                   if(!indices[i][j]) {
                      if(transferI>0&&transferJ>0) indices[transferI][transferJ] = false;
@@ -191,20 +191,17 @@ public class Device {
          
          //TODO use properties to calculate if a device is not suitable (<0) or rate it's suitability (>=0)
          
-         int graphicsQueueIndex = -1, computeQueueIndex = -1, transferQueueIndex = -1;
+         int graphicsQueueIndex = -1, computeQueueIndex = -1;
          for(int i = 0; i<pqueueProperties.capacity(); i++) {
             if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT) {
                graphicsQueueIndex = i;
                continue;
             } if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT) {
                computeQueueIndex = i;
-               continue;
-            } if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_TRANSFER_BIT) == VK_QUEUE_TRANSFER_BIT) {
-               transferQueueIndex = i;
             }
          }
          
-         if(graphicsQueueIndex<0 || computeQueueIndex<0 || transferQueueIndex<0) return -1;
+         if(graphicsQueueIndex<0 || computeQueueIndex<0) return -1;
          
          IntBuffer pSupported = stack.mallocInt(1);
          vkAssert(vkGetPhysicalDeviceSurfaceSupportKHR(physical, graphicsQueueIndex, win.surface, pSupported));
@@ -260,6 +257,8 @@ public class Device {
       // VkPhysicalDeviceProperties
       properties = VkPhysicalDeviceProperties.malloc();
       vkGetPhysicalDeviceProperties(physical, properties);
+      
+      memFree(pnum);
    }
 
    public void dispose() {

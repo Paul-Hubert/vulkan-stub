@@ -4,11 +4,13 @@ import static fr.placeholder.vulkanproject.Context.device;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.vulkan.EXTDebugReport.VK_ERROR_VALIDATION_FAILED_EXT;
@@ -27,7 +29,32 @@ public class Utils {
          throw new AssertionError("Error : " + translateVulkanResult(result));
       }
    }
-
+   
+   public static void print(LongBuffer buffer) {
+      System.out.println(buffer);
+      for(int i = 0; i<buffer.limit(); i++) {
+         System.out.println(buffer.get(i));
+      }
+   }
+   
+   public static void print(PointerBuffer buffer) {
+      System.out.println(buffer);
+      for(int i = 0; i<buffer.limit(); i++) {
+         System.out.println(buffer.get(i));
+      }
+   }
+   
+   public static void print(IntBuffer buffer) {
+      System.out.println(buffer);
+      for(int i = 0; i<buffer.limit(); i++) {
+         System.out.println(buffer.get(i));
+      }
+   }
+   
+   public static void dispatch(Runnable run) {
+      new Thread(run).start();
+   }
+   
    /**
     * Translates a Vulkan {@code VkResult} value to a String describing the
     * result.

@@ -1,6 +1,8 @@
 package fr.placeholder.terrain;
 
 import fr.placeholder.vulkanproject.Orchestrated;
+import java.nio.LongBuffer;
+import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.vulkan.VK10.VK_PIPELINE_BIND_POINT_GRAPHICS;
 import static org.lwjgl.vulkan.VK10.vkCmdBindPipeline;
 import static org.lwjgl.vulkan.VK10.vkCmdBindVertexBuffers;
@@ -24,8 +26,11 @@ public class Terrain extends Orchestrated {
    }
    
    public void draw(VkCommandBuffer commandBuffer) {
+      LongBuffer vertexBuffers = MemoryStack.stackMallocLong(1), vertexOffsets = MemoryStack.stackMallocLong(1);
+      vertexBuffers.put(0, data.vertexBuffer.get());
+      vertexOffsets.put(0, data.vertexBuffer.memOffset());
       vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.line);
-      vkCmdBindVertexBuffers(commandBuffer, 0, data.vertexBuffers, data.vertexOffsets);
+      vkCmdBindVertexBuffers(commandBuffer, 0, vertexBuffers, vertexOffsets);
       vkCmdDraw(commandBuffer, 3, 1, 0, 0);
    }
    
@@ -37,6 +42,7 @@ public class Terrain extends Orchestrated {
 
    @Override
    public void dispose() {
+      super.dispose();
       pipe.dispose();
       data.dispose();
    }
