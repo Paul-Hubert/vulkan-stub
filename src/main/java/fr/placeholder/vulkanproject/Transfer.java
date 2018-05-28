@@ -5,7 +5,6 @@ import static fr.placeholder.vulkanproject.Context.transfer;
 import static fr.placeholder.vulkanproject.Utils.vkAssert;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.nio.LongBuffer;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.system.MemoryStack.stackPush;
@@ -13,15 +12,12 @@ import org.lwjgl.system.MemoryUtil;
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.system.MemoryUtil.memAddress;
 import static org.lwjgl.system.MemoryUtil.memAllocPointer;
+import static org.lwjgl.system.MemoryUtil.memCallocPointer;
 import static org.lwjgl.system.MemoryUtil.memFree;
 import org.lwjgl.vulkan.VK10;
-import static org.lwjgl.vulkan.VK10.VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 import static org.lwjgl.vulkan.VK10.VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 import static org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_SUBMIT_INFO;
-import static org.lwjgl.vulkan.VK10.vkAllocateCommandBuffers;
 import static org.lwjgl.vulkan.VK10.vkBeginCommandBuffer;
 import static org.lwjgl.vulkan.VK10.vkCmdCopyBuffer;
 import static org.lwjgl.vulkan.VK10.vkEndCommandBuffer;
@@ -45,8 +41,8 @@ public class Transfer extends Orchestrated {
    public void init() {
       super.init();
       
-      pCommands = memAllocPointer(3);
-      tempCommands = memAllocPointer(3);
+      pCommands = memCallocPointer(3);
+      tempCommands = memCallocPointer(3);
       waitDstStageMask = MemoryUtil.memAllocInt(waitSemaphores.capacity());
       waitDstStageMask.put(0, VK10.VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
       
@@ -77,6 +73,7 @@ public class Transfer extends Orchestrated {
          }
          memFree(temp);
       }
+      
       pCommands.put(commandCount, command);
       commandCount++;
    }
@@ -103,12 +100,12 @@ public class Transfer extends Orchestrated {
       
       for(int i = 0; i < commandCount; i++) {
          tempCommands.put(i, pCommands.get(i));
-      }
+      } tempCommands.limit(commandCount);
       
-      Utils.dispatch(() -> {
-         VK10.vkWaitForFences(device.logical, curFence, false, Long.MAX_VALUE);
-         VK10.vkResetFences(device.logical, curFence);
-         VK10.vkFreeCommandBuffers(device.logical, pool.ptr, pCommands);
+      Threading.dispatch(() -> {
+         vkAssert(VK10.vkWaitForFences(device.logical, curFence, true, 32L * 1000000L));
+         vkAssert(VK10.vkResetFences(device.logical, curFence));
+         VK10.vkFreeCommandBuffers(device.logical, pool.ptr, tempCommands);
       });
       
       commandCount = 0;

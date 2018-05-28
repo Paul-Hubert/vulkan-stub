@@ -121,6 +121,9 @@ public class Device {
             }
          }
          
+         if(computeI<0) {computeI = graphicsI; computeJ = graphicsJ;}
+         if(transferI<0) {transferI = graphicsI; transferJ = graphicsJ;}
+         
          int count = 1 + (graphicsI!=computeI&&graphicsI!=transferI?1:0) + (computeI!=transferI? 1 : 0);
          int[] countQ = {graphicsI, graphicsI!=computeI?computeI:-1, transferI!=computeI && graphicsI!=transferI ? transferI:-1};
          
@@ -170,10 +173,22 @@ public class Device {
          
          vkGetDeviceQueue(logical, graphicsI, graphicsJ,  pQueue);
          graphics = new VkQueue(pQueue.get(0), logical);
-         vkGetDeviceQueue(logical, computeI, computeJ,  pQueue);
-         compute = new VkQueue(pQueue.get(0), logical);
-         vkGetDeviceQueue(logical, transferI, transferJ,  pQueue);
-         transfer = new VkQueue(pQueue.get(0), logical);
+         
+         if(graphicsI == computeI && graphicsJ == computeJ) {
+            compute = graphics;
+         } else {
+            vkGetDeviceQueue(logical, computeI, computeJ,  pQueue);
+            compute = new VkQueue(pQueue.get(0), logical);
+         }
+         
+         if(graphicsI == transferI && graphicsJ == transferJ) {
+            transfer = graphics;
+         } else if(computeI == transferI && computeJ == transferJ) {
+            transfer = compute;
+         } else {
+            vkGetDeviceQueue(logical, transferI, transferJ,  pQueue);
+            transfer = new VkQueue(pQueue.get(0), logical);
+         }
          
       }
    }
@@ -193,9 +208,9 @@ public class Device {
          
          int graphicsQueueIndex = -1, computeQueueIndex = -1;
          for(int i = 0; i<pqueueProperties.capacity(); i++) {
+            System.out.println(Integer.toBinaryString(pqueueProperties.get(i).queueCount()));
             if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT) {
                graphicsQueueIndex = i;
-               continue;
             } if((pqueueProperties.get(i).queueFlags() & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT) {
                computeQueueIndex = i;
             }

@@ -51,10 +51,6 @@ public class Utils {
       }
    }
    
-   public static void dispatch(Runnable run) {
-      new Thread(run).start();
-   }
-   
    /**
     * Translates a Vulkan {@code VkResult} value to a String describing the
     * result.

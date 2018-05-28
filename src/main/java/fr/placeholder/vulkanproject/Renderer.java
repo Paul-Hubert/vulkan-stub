@@ -5,8 +5,6 @@ import static fr.placeholder.vulkanproject.Context.swap;
 import static fr.placeholder.vulkanproject.Utils.vkAssert;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
-import org.lwjgl.system.MemoryStack;
-import static org.lwjgl.system.MemoryStack.stackPush;
 import org.lwjgl.system.MemoryUtil;
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.system.MemoryUtil.memAllocInt;
@@ -14,6 +12,7 @@ import static org.lwjgl.system.MemoryUtil.memFree;
 import static org.lwjgl.vulkan.KHRSwapchain.VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 import static org.lwjgl.vulkan.KHRSwapchain.vkAcquireNextImageKHR;
 import static org.lwjgl.vulkan.KHRSwapchain.vkQueuePresentKHR;
+import static org.lwjgl.vulkan.VK10.VK_NULL_HANDLE;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
 
 public class Renderer extends Orchestrated {
@@ -51,7 +50,7 @@ public class Renderer extends Orchestrated {
    private VkPresentInfoKHR presentInfo;
 
    public int acquire() {
-      vkAssert(vkAcquireNextImageKHR(device.logical, swap.chain, Long.MAX_VALUE, signalSemaphores.get(0), NULL, pImageIndex));
+      vkAssert(vkAcquireNextImageKHR(device.logical, swap.chain, 1000000000000000L, signalSemaphores.get(0), VK_NULL_HANDLE, pImageIndex));
       current = pImageIndex.get(0);
       return current;
    }
