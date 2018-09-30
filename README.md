@@ -1,4 +1,3 @@
 # vulkan-stub
-This is a Vulkan experiment, for now.
+This was a Vulkan experiment, in Java.
 Java is great for performance critical applications.
-Nice Meme.
